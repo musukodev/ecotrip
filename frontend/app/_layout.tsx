@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 
 function AuthGuard() {
@@ -8,10 +8,11 @@ function AuthGuard() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated === null) return; // still loading
+    if (isAuthenticated === null) return; // Menunggu auth state siap
 
     const segment = segments[0];
-    // Splash (index) & onboarding are handled separately
+
+    // Melewati splash (index) & onboarding
     if (segment === undefined || segment === '(onboarding)') return;
 
     const inAuth = segment === '(auth)';
@@ -19,11 +20,20 @@ function AuthGuard() {
     if (!isAuthenticated && !inAuth) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuth) {
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments]);
 
-  return <Slot />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(onboarding)" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="stay/[id]" />
+      <Stack.Screen name="trip/[id]" />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
