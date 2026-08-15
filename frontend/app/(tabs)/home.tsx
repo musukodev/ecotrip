@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Colors } from '@/constants/theme';
 
 export default function HomeScreen() {
   return (
@@ -27,20 +28,20 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: Colors.background },
   hero: {
-    backgroundColor: '#2d6a4f', padding: 24,
+    backgroundColor: Colors.primary, padding: 24,
     paddingTop: 32, paddingBottom: 32,
   },
-  heroTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 6 },
-  heroSub: { fontSize: 14, color: '#b7e4c7' },
+  heroTitle: { fontSize: 22, fontWeight: 'bold', color: Colors.white, marginBottom: 6 },
+  heroSub: { fontSize: 14, color: Colors.greenPale },
   card: {
-    backgroundColor: '#fff', margin: 16, marginTop: 0, marginBottom: 12,
+    backgroundColor: Colors.card, margin: 16, marginTop: 0, marginBottom: 12,
     borderRadius: 12, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  cardTitle: { fontSize: 14, color: '#888', marginBottom: 8 },
-  cardValue: { fontSize: 32, fontWeight: 'bold', color: '#2d6a4f' },
-  cardHint: { fontSize: 12, color: '#aaa', marginTop: 4 },
-  tip: { fontSize: 14, color: '#444', marginBottom: 6 },
+  cardTitle: { fontSize: 14, color: Colors.textMuted, marginBottom: 8 },
+  cardValue: { fontSize: 32, fontWeight: 'bold', color: Colors.primary },
+  cardHint: { fontSize: 12, color: Colors.placeholder, marginTop: 4 },
+  tip: { fontSize: 14, color: Colors.textSecondary, marginBottom: 6 },
 });

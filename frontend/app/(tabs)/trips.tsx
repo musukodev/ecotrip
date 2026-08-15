@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { tripService, Trip } from '@/services/tripService';
+import { Colors } from '@/constants/theme';
 
 export default function TripsScreen() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function TripsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2d6a4f" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -62,24 +63,24 @@ export default function TripsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { flex: 1 },
   list: { padding: 16 },
-  emptyText: { color: '#888', fontSize: 16 },
+  emptyText: { color: Colors.textMuted, fontSize: 16 },
   card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12,
+    backgroundColor: Colors.card, borderRadius: 12, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1b4332', marginBottom: 4 },
-  cardDest: { fontSize: 14, color: '#555', marginBottom: 2 },
-  cardDate: { fontSize: 12, color: '#888', marginBottom: 8 },
-  carbon: { fontSize: 13, color: '#2d6a4f', fontWeight: '600' },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.primary, marginBottom: 4 },
+  cardDest: { fontSize: 14, color: Colors.textSecondary, marginBottom: 2 },
+  cardDate: { fontSize: 12, color: Colors.textMuted, marginBottom: 8 },
+  carbon: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   fab: {
     position: 'absolute', bottom: 24, right: 24,
-    backgroundColor: '#2d6a4f', borderRadius: 24,
+    backgroundColor: Colors.primary, borderRadius: 24,
     paddingVertical: 14, paddingHorizontal: 24,
     elevation: 4,
   },
-  fabText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  fabText: { color: Colors.white, fontWeight: 'bold', fontSize: 15 },
 });

@@ -1,14 +1,15 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { Colors } from '@/constants/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2d6a4f',
-        tabBarInactiveTintColor: '#888',
-        headerStyle: { backgroundColor: '#2d6a4f' },
-        headerTintColor: '#fff',
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textMuted,
+        headerStyle: { backgroundColor: Colors.primary },
+        headerTintColor: Colors.white,
       }}
     >
       <Tabs.Screen
