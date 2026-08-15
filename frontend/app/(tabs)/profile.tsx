@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { authService } from '@/services/authService';
+import { Colors } from '@/constants/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -34,16 +35,16 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', paddingTop: 60, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, alignItems: 'center', paddingTop: 60, backgroundColor: Colors.background },
   avatar: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#b7e4c7', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+    backgroundColor: Colors.greenPale, alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
   avatarText: { fontSize: 48 },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#1b4332', marginBottom: 32 },
+  name: { fontSize: 20, fontWeight: 'bold', color: Colors.primary, marginBottom: 32 },
   logoutBtn: {
-    backgroundColor: '#e63946', borderRadius: 8,
+    backgroundColor: Colors.danger, borderRadius: 8,
     paddingVertical: 14, paddingHorizontal: 32,
   },
-  logoutText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  logoutText: { color: Colors.white, fontWeight: 'bold', fontSize: 16 },
 });

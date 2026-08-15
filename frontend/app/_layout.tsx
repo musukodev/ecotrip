@@ -10,7 +10,11 @@ function AuthGuard() {
   useEffect(() => {
     if (isAuthenticated === null) return; // still loading
 
-    const inAuth = segments[0] === '(auth)';
+    const segment = segments[0];
+    // Splash (index) & onboarding are handled separately
+    if (segment === undefined || segment === '(onboarding)') return;
+
+    const inAuth = segment === '(auth)';
 
     if (!isAuthenticated && !inAuth) {
       router.replace('/(auth)/login');

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { authService } from '@/services/authService';
+import { Colors } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -81,18 +82,18 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 36, fontWeight: 'bold', color: '#2d6a4f', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
+  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: Colors.white },
+  title: { fontSize: 36, fontWeight: 'bold', color: Colors.primary, textAlign: 'center', marginBottom: 4 },
+  subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginBottom: 32 },
   input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 8,
     padding: 14, marginBottom: 12, fontSize: 16,
   },
   button: {
-    backgroundColor: '#2d6a4f', borderRadius: 8,
+    backgroundColor: Colors.primary, borderRadius: 8,
     padding: 16, alignItems: 'center', marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  link: { color: '#2d6a4f', textAlign: 'center', marginTop: 16, fontSize: 14 },
+  buttonText: { color: Colors.white, fontWeight: 'bold', fontSize: 16 },
+  link: { color: Colors.primary, textAlign: 'center', marginTop: 16, fontSize: 14 },
 });
