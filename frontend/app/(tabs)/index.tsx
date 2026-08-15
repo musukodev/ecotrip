@@ -1,13 +1,13 @@
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Header from '@/components/Header';
-import WeatherCard from '@/components/WeatherCard';
-import SectionHeader from '@/components/SectionHeader';
-import ActiveTripCard from '@/components/ActiveTripCard';
-import ImageInfoCard from '@/components/ImageInfoCard';
-import ListingRow from '@/components/ListingRow';
-import FloatingActionButton from '@/components/FloatingActionButton';
+import Header from '@/components/layout/Header';
+import FloatingActionButton from '@/components/layout/FloatingActionButton';
+import SectionHeader from '@/components/common/SectionHeader';
+import ActiveTripCard from '@/components/common/ActiveTripCard';
+import WeatherCard from '@/components/home/WeatherCard';
+import ImageCardSection from '@/components/home/ImageCardSection';
+import ListingSection from '@/components/home/ListingSection';
 
 import { Colors, spacing } from '@/constants/theme';
 import {
@@ -34,41 +34,11 @@ export default function HomeScreen() {
         <SectionHeader title="ACTIVE TRIPS" showViewAll={false} />
         <ActiveTripCard trip={activeTrip} />
 
-        <SectionHeader title="ECO RECOMMENDATIONS" />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {ecoRecommendations.map((item) => (
-            <ImageInfoCard key={item.id} item={item} />
-          ))}
-        </ScrollView>
+        <ImageCardSection title="ECO RECOMMENDATIONS" items={ecoRecommendations} />
+        <ImageCardSection title="FEATURED TRIPS" items={featuredTrips} showPrice />
 
-        <SectionHeader title="FEATURED TRIPS" />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {featuredTrips.map((item) => (
-            <ImageInfoCard key={item.id} item={item} showPrice />
-          ))}
-        </ScrollView>
-
-        <SectionHeader title="ECO-FRIENDLY STAYS" />
-        <View style={{ marginTop: spacing.xs }}>
-          {ecoStays.map((item) => (
-            <ListingRow key={item.id} item={item} />
-          ))}
-        </View>
-
-        <SectionHeader title="RENTAL VEHICLES" />
-        <View style={{ marginTop: spacing.xs }}>
-          {rentalVehicles.map((item) => (
-            <ListingRow key={item.id} item={item} />
-          ))}
-        </View>
+        <ListingSection title="ECO-FRIENDLY STAYS" items={ecoStays} />
+        <ListingSection title="RENTAL VEHICLES" items={rentalVehicles} />
       </ScrollView>
 
       <FloatingActionButton onPress={() => {}} />
@@ -84,9 +54,5 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  hScroll: {
-    paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
   },
 });

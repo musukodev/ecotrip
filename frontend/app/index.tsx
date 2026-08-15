@@ -25,7 +25,11 @@ export default function SplashScreen() {
   useEffect(() => {
     if (!ready || isAuthenticated === null) return;
 
-    router.replace('/(onboarding)');
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/(onboarding)');
+    }
   }, [ready, isAuthenticated]);
 
   return (

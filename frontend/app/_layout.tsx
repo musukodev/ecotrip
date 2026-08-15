@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 
 function AuthGuard() {
   const { isAuthenticated } = useAuth();
@@ -37,5 +37,9 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
-  return <AuthGuard />;
+  return (
+    <AuthProvider>
+      <AuthGuard />
+    </AuthProvider>
+  );
 }
