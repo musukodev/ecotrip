@@ -52,7 +52,7 @@ export default function RegisterScreen() {
     try {
       await authService.register({ name, email, password });
       setIsAuthenticated(true);
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)');
     } catch (err: any) {
       Alert.alert('Registrasi gagal', err.response?.data?.error ?? 'Terjadi kesalahan');
     } finally {

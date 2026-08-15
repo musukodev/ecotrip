@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
+import { authService } from '@/services/authService';
 
 const GoogleIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" style={{ marginRight: 10 }}>
@@ -31,13 +32,18 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Cukup ubah Auth State ke true. AuthGuard di Root Layout yang akan mengarahkan ke /(tabs)
+  // Panggil authService untuk menyimpan token, lalu update AuthContext.
+  // AuthGuard di Root Layout yang akan mengarahkan ke /(tabs).
   const handleLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await authService.login({ email, password });
       setIsAuthenticated(true);
-    }, 800);
+    } catch (err: any) {
+      Alert.alert('Login gagal', err.response?.data?.error ?? 'Terjadi kesalahan');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
