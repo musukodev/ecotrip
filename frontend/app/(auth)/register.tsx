@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/theme';
 
 // Google Icon SVG (4 Colors)
@@ -39,6 +40,7 @@ const GoogleIcon = () => (
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { setIsAuthenticated } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,22 +48,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Semua field wajib diisi');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Konfirmasi kata sandi tidak cocok');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Error', 'Kata sandi minimal 8 karakter');
-      return;
-    }
-
     setLoading(true);
     try {
       await authService.register({ name, email, password });
+      setIsAuthenticated(true);
       router.replace('/(tabs)/home');
     } catch (err: any) {
       Alert.alert('Registrasi gagal', err.response?.data?.error ?? 'Terjadi kesalahan');

@@ -1,47 +1,92 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { Colors } from '@/constants/theme';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import Header from '@/components/Header';
+import WeatherCard from '@/components/WeatherCard';
+import SectionHeader from '@/components/SectionHeader';
+import ActiveTripCard from '@/components/ActiveTripCard';
+import ImageInfoCard from '@/components/ImageInfoCard';
+import ListingRow from '@/components/ListingRow';
+import FloatingActionButton from '@/components/FloatingActionButton';
+
+import { Colors, spacing } from '@/constants/theme';
+import {
+  weather,
+  activeTrip,
+  ecoRecommendations,
+  featuredTrips,
+  ecoStays,
+  rentalVehicles,
+} from '@/constants/mockData';
 
 export default function HomeScreen() {
   return (
-    <ScrollView style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Selamat datang di EcoTrip!</Text>
-        <Text style={styles.heroSub}>Rencanakan perjalanan ramah lingkungan kamu.</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: spacing.xl }}
+        showsVerticalScrollIndicator={false}
+      >
+        <Header name="Traveler" />
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Carbon Footprint Bulan Ini</Text>
-        <Text style={styles.cardValue}>0 kg CO₂</Text>
-        <Text style={styles.cardHint}>Mulai trip pertamamu!</Text>
-      </View>
+        <WeatherCard weather={weather} />
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Tips Eco Travel</Text>
-        <Text style={styles.tip}>• Pilih transportasi umum daripada penerbangan jarak dekat</Text>
-        <Text style={styles.tip}>• Bawa botol minum sendiri</Text>
-        <Text style={styles.tip}>• Pilih akomodasi ramah lingkungan</Text>
-      </View>
-    </ScrollView>
+        <SectionHeader title="ACTIVE TRIPS" showViewAll={false} />
+        <ActiveTripCard trip={activeTrip} />
+
+        <SectionHeader title="ECO RECOMMENDATIONS" />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.hScroll}
+        >
+          {ecoRecommendations.map((item) => (
+            <ImageInfoCard key={item.id} item={item} />
+          ))}
+        </ScrollView>
+
+        <SectionHeader title="FEATURED TRIPS" />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.hScroll}
+        >
+          {featuredTrips.map((item) => (
+            <ImageInfoCard key={item.id} item={item} showPrice />
+          ))}
+        </ScrollView>
+
+        <SectionHeader title="ECO-FRIENDLY STAYS" />
+        <View style={{ marginTop: spacing.xs }}>
+          {ecoStays.map((item) => (
+            <ListingRow key={item.id} item={item} />
+          ))}
+        </View>
+
+        <SectionHeader title="RENTAL VEHICLES" />
+        <View style={{ marginTop: spacing.xs }}>
+          {rentalVehicles.map((item) => (
+            <ListingRow key={item.id} item={item} />
+          ))}
+        </View>
+      </ScrollView>
+
+      <FloatingActionButton onPress={() => {}} />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  hero: {
-    backgroundColor: Colors.primary, padding: 24,
-    paddingTop: 32, paddingBottom: 32,
+  safe: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  heroTitle: { fontSize: 22, fontWeight: 'bold', color: Colors.white, marginBottom: 6 },
-  heroSub: { fontSize: 14, color: Colors.greenPale },
-  card: {
-    backgroundColor: Colors.card, margin: 16, marginTop: 0, marginBottom: 12,
-    borderRadius: 12, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+  scroll: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  cardTitle: { fontSize: 14, color: Colors.textMuted, marginBottom: 8 },
-  cardValue: { fontSize: 32, fontWeight: 'bold', color: Colors.primary },
-  cardHint: { fontSize: 12, color: Colors.placeholder, marginTop: 4 },
-  tip: { fontSize: 14, color: Colors.textSecondary, marginBottom: 6 },
+  hScroll: {
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
+  },
 });

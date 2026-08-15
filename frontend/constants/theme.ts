@@ -13,6 +13,7 @@ export const Colors = {
   coral: '#e76f51',
   coralLight: '#f4a261',
 
+  sun: '#F5A623',
   danger: '#e63946',
 
   background: '#F4F7F4',
@@ -26,4 +27,44 @@ export const Colors = {
   divider: '#E2E8F0',
   white: '#FFFFFF',
   disabled: '#0D2B2280',
+};
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+};
+
+export const radius = {
+  sm: 10,
+  md: 16,
+  lg: 24,
+  pill: 999,
+};
+
+export const font = {
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  h1: {
+    fontSize: 26,
+    fontWeight: '700',
+  },
+  h2: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  body: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  caption: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
 };

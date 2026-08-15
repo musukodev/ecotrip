@@ -16,6 +16,7 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: 'Beranda',
+          headerShown: false,
           tabBarLabel: 'Beranda',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏠</Text>,
         }}

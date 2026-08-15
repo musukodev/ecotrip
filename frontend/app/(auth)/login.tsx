@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/constants/theme';
 
 // Google Icon SVG (4 Colors)
@@ -39,18 +40,16 @@ const GoogleIcon = () => (
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { setIsAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Email dan password wajib diisi');
-      return;
-    }
     setLoading(true);
     try {
       await authService.login({ email, password });
+      setIsAuthenticated(true);
       router.replace('/(tabs)/home');
     } catch (err: any) {
       Alert.alert('Login gagal', err.response?.data?.error ?? 'Terjadi kesalahan');
