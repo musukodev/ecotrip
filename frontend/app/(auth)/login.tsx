@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
 
+import { API_URL } from '@/constants/api';
+
 const GoogleIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" style={{ marginRight: 10 }}>
     <Path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -27,20 +29,28 @@ const GoogleIcon = () => (
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, setUserRole } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Panggil authService untuk menyimpan token, lalu update AuthContext.
-  // AuthGuard di Root Layout yang akan mengarahkan ke /(tabs).
+  // AuthGuard di Root Layout yang akan mengarahkan ke /(tabs) atau /(business).
   const handleLogin = async () => {
     setLoading(true);
     try {
-      await authService.login({ email, password });
+      const res = await authService.login({ email, password });
+      setUserRole(res.user?.role || 'tourist');
       setIsAuthenticated(true);
     } catch (err: any) {
-      Alert.alert('Login gagal', err.response?.data?.error ?? 'Terjadi kesalahan');
+      console.error('Login error details:', err);
+      const errorMessage =
+        err.response?.data?.error ??
+        (err.message === 'Network Error'
+          ? `Gagal terhubung ke backend (${API_URL}). Pastikan server Go aktif.`
+          : err.message) ??
+        'Terjadi kesalahan';
+      Alert.alert('Login gagal', errorMessage);
     } finally {
       setLoading(false);
     }

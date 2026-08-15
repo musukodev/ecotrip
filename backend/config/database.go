@@ -30,12 +30,29 @@ func ConnectDB() {
 
 	log.Println("Database connected")
 
-	// Auto migrate
-	if err := DB.AutoMigrate(&model.User{}, &model.Trip{}); err != nil {
+	// AutoMigrate model-model baru sesuai arsitektur revisi
+	if err := DB.AutoMigrate(
+		&model.User{},
+		&model.PasswordReset{},
+		&model.UserPreference{},
+		&model.Destination{},
+		&model.Accommodation{},
+		&model.FerryRoute{},
+		&model.UserFavorite{},
+		&model.Trip{},
+		&model.TripVersion{},
+		&model.ItineraryDay{},
+		&model.ItineraryActivity{},
+		&model.ChatMessage{},
+		&model.CarbonOffset{},
+		&model.TripCollaborator{},
+		&model.Notification{},
+		&model.Rating{},
+	); err != nil {
 		log.Fatalf("Auto migrate failed: %v", err)
 	}
 
-	log.Println("Auto migrate done")
+	log.Println("Auto migrate done — models ready")
 }
 
 func getEnv(key, fallback string) string {

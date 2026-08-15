@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,179 +6,183 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-export const ACCOMMODATIONS_DATA = [
-  {
-    id: 'nirwana-eco-resort',
-    title: 'Nirwana Eco Resort',
-    category: 'Resort',
-    badge: 'Sustainable',
-    rating: '4.8',
-    description:
-      'Luxury beachfront eco-resort fully powered by solar energy, featuring organic dining and reef restoration tours.',
-    location: 'Bali, Indonesia',
-    price: 'Rp 1.2M / night',
-    image:
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000',
-    tags: ['Sustainable Certified', 'Luxury'],
-    about:
-      'Experience unparalleled luxury in harmony with nature. Nirwana Eco Resort is a pioneering sanctuary fully powered by solar energy, offering organic farm-to-table dining and exclusive reef restoration tours, proving that premium comfort doesn\'t have to cost the earth.',
-    amenities: [
-      { name: 'Fast Wi-Fi', icon: 'wifi-outline' },
-      { name: 'Infinity Pool', icon: 'water-outline' },
-      { name: 'Eco Spa', icon: 'leaf-outline' },
-      { name: 'Organic Dining', icon: 'restaurant-outline' },
-    ],
-    ecoImpacts: [
-      {
-        title: '100% Solar Powered',
-        desc: 'The entire resort operates on renewable energy, significantly reducing its carbon footprint while providing uninterrupted luxury.',
-        icon: 'flash-outline',
-      },
-      {
-        title: 'Reef Protection',
-        desc: 'A portion of every booking goes towards local coral reef restoration programs, ensuring marine biodiversity for future generations.',
-        icon: 'water-outline',
-      },
-    ],
-  },
-  {
-    id: 'batam-green-villa',
-    title: 'Batam Green Villa',
-    category: 'Hotel',
-    badge: 'Eco-Badge',
-    rating: '4.9',
-    description:
-      'Sustainable forest retreat featuring expansive organic gardens, rainwater harvesting, and zero-waste initiatives.',
-    location: 'Batam, Indonesia',
-    price: 'Rp 850k / night',
-    image:
-      'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000',
-    tags: ['Eco-Badge', 'Forest View'],
-    about:
-      'Nestled deep within Batam\'s lush forest, Batam Green Villa offers a peaceful getaway designed with local bamboo materials and modern sustainable comforts.',
-    amenities: [
-      { name: 'Fast Wi-Fi', icon: 'wifi-outline' },
-      { name: 'Nature Walk', icon: 'walk-outline' },
-      { name: 'Eco Kitchen', icon: 'restaurant-outline' },
-    ],
-    ecoImpacts: [
-      {
-        title: 'Rainwater Harvesting',
-        desc: '100% of water used for gardens and secondary needs is collected through sustainable rainwater systems.',
-        icon: 'rainy-outline',
-      },
-    ],
-  },
-];
+import { accommodationService, Accommodation } from '@/services/accommodationService';
 
 export default function StayScreen() {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState('Hotel');
+  const [selectedCategory, setSelectedCategory] = useState<string>('hotel');
+  const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const categories = ['Hotel', 'Resort', 'Homestay'];
+  const categories = [
+    { key: 'hotel', label: 'Hotel' },
+    { key: 'resort', label: 'Resort' },
+    { key: 'homestay', label: 'Homestay' },
+  ];
+
+  const fetchAccommodations = async (cat: string) => {
+    try {
+      setLoading(true);
+      const data = await accommodationService.getAccommodations(cat);
+      setAccommodations(data);
+    } catch (e) {
+      console.error('Failed to load accommodations', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccommodations(selectedCategory);
+  }, [selectedCategory]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAccommodations(selectedCategory);
+  };
+
+  const handleToggleFavorite = async (id: number) => {
+    try {
+      const res = await accommodationService.toggleFavorite(id);
+      setAccommodations((prev) =>
+        prev.map((acc) => (acc.id === id ? { ...acc, is_favorite: res.is_favorite } : acc))
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0B3C26']} />}
+      >
         {/* Accommodation Preferences Header */}
         <View style={styles.prefHeader}>
           <Ionicons name="bed-outline" size={18} color="#0B3C26" />
-          <Text style={styles.prefTitle}>ACCOMMODATION PREFERENCES</Text>
+          <Text style={styles.prefTitle}>PILIHAN PENGINAPAN BATAM</Text>
         </View>
 
         {/* Category Pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catContainer}>
           {categories.map((cat) => {
-            const isActive = selectedCategory === cat;
+            const isActive = selectedCategory === cat.key;
             return (
               <TouchableOpacity
-                key={cat}
+                key={cat.key}
                 style={[styles.catPill, isActive && styles.catPillActive]}
-                onPress={() => setSelectedCategory(cat)}
+                onPress={() => setSelectedCategory(cat.key)}
               >
                 <Ionicons
-                  name={cat === 'Hotel' ? 'bed' : cat === 'Resort' ? 'home-outline' : 'business-outline'}
+                  name={cat.key === 'hotel' ? 'bed' : cat.key === 'resort' ? 'home-outline' : 'business-outline'}
                   size={16}
                   color={isActive ? '#FFFFFF' : '#0B3C26'}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={[styles.catText, isActive && styles.catTextActive]}>{cat}</Text>
+                <Text style={[styles.catText, isActive && styles.catTextActive]}>{cat.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* Accommodation Cards List */}
-        {ACCOMMODATIONS_DATA.map((item) => (
-          <View key={item.id} style={styles.card}>
-            {/* Image Header with Favorite Button */}
-            <View style={styles.imageWrapper}>
-              <Image source={{ uri: item.image }} style={styles.cardImage} />
-              <TouchableOpacity style={styles.heartCircle}>
-                <Ionicons name="heart-outline" size={20} color="#000" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Card Content */}
-            <View style={styles.cardContent}>
-              <View style={styles.badgeRow}>
-                <View style={styles.ecoBadge}>
-                  <Ionicons name="leaf-outline" size={12} color="#0B3C26" />
-                  <Text style={styles.ecoBadgeText}>{item.badge}</Text>
-                </View>
-
-                <View style={styles.ratingBadge}>
-                  <Ionicons name="star" size={12} color="#D97706" />
-                  <Text style={styles.ratingText}>{item.rating}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-
-              <View style={styles.divider} />
-
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={16} color="#64748B" />
-                <Text style={styles.infoText}>{item.location}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="wallet-outline" size={16} color="#64748B" />
-                <Text style={styles.priceText}>{item.price}</Text>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionRow}>
-                <View style={styles.iconGroup}>
-                  <TouchableOpacity style={styles.circleBtn}>
-                    <Ionicons name="compass-outline" size={16} color="#0B3C26" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.circleBtn}>
-                    <Ionicons name="call-outline" size={16} color="#0B3C26" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.circleBtn}>
-                    <Ionicons name="share-social-outline" size={16} color="#0B3C26" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* View Details Click Event -> Mengarah ke app/stay/[id].tsx */}
+        {/* Loading Spinner */}
+        {loading && !refreshing ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#0B3C26" />
+          </View>
+        ) : accommodations.length === 0 ? (
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>Belum ada penginapan di kategori ini.</Text>
+          </View>
+        ) : (
+          /* Accommodation Cards List */
+          accommodations.map((item) => (
+            <View key={item.id} style={styles.card}>
+              {/* Image Header with Favorite Button */}
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={{ uri: item.photos?.[0] || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000' }}
+                  style={styles.cardImage}
+                />
                 <TouchableOpacity
-                  style={styles.detailBtn}
-                  onPress={() => router.push(`/stay/${item.id}`)}
+                  style={styles.heartCircle}
+                  onPress={() => handleToggleFavorite(item.id)}
                 >
-                  <Text style={styles.detailBtnText}>View Details</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#0B3C26" />
+                  <Ionicons
+                    name={item.is_favorite ? 'heart' : 'heart-outline'}
+                    size={20}
+                    color={item.is_favorite ? '#E63946' : '#000000'}
+                  />
                 </TouchableOpacity>
               </View>
+
+              {/* Card Content */}
+              <View style={styles.cardContent}>
+                <View style={styles.badgeRow}>
+                  <View style={styles.ecoBadge}>
+                    <Ionicons name="leaf-outline" size={12} color="#0B3C26" />
+                    <Text style={styles.ecoBadgeText}>
+                      Eco Score {item.eco_score ? item.eco_score.toFixed(1) : '90.0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={12} color="#D97706" />
+                    <Text style={styles.ratingText}>
+                      {item.eco_score ? (item.eco_score / 20).toFixed(1) : '4.8'}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.title}>{item.name}</Text>
+                <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Ionicons name="location-outline" size={16} color="#64748B" />
+                  <Text style={styles.infoText}>{item.location}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="wallet-outline" size={16} color="#64748B" />
+                  <Text style={styles.priceText}>
+                    Rp {(item.price_per_night / 1000).toLocaleString('id-ID')}k / malam
+                  </Text>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.actionRow}>
+                  <View style={styles.iconGroup}>
+                    {item.phone && (
+                      <TouchableOpacity style={styles.circleBtn}>
+                        <Ionicons name="call-outline" size={16} color="#0B3C26" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* View Details Click Event */}
+                  <TouchableOpacity
+                    style={styles.detailBtn}
+                    onPress={() => router.push(`/stay/${item.id}`)}
+                  >
+                    <Text style={styles.detailBtnText}>View Details</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#0B3C26" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -187,6 +191,8 @@ export default function StayScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EFF6F3' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 10 },
+  center: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: '#64748B', fontSize: 14 },
   prefHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   prefTitle: { fontSize: 12, fontWeight: '800', color: '#0B3C26', letterSpacing: 0.8, marginLeft: 6 },
   catContainer: { flexDirection: 'row', marginBottom: 16 },

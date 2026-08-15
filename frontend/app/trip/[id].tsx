@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,268 +8,196 @@ import {
   TouchableOpacity,
   Dimensions,
   Linking,
+  Share,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { destinationService, Destination } from '@/services/destinationService';
+import { ratingService, RatingResponse } from '@/services/ratingService';
 
 const { width } = Dimensions.get('window');
 
-// Extended Mock Data untuk menyesuaikan komponen desain UI
-const TRIPS_DETAIL_DATA: Record<string, any> = {
-  'bali-eco-tour': {
-    id: 'bali-eco-tour',
-    title: 'Bali Eco Cultural Tour',
-    badge: 'SUSTAINABLE',
-    location: 'Ubud, Bali',
-    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1000',
-    description:
-      'Explore green rice terraces, traditional villages, and eco-friendly workshops. Immerse yourself in the rich biodiversity and culture, supporting local heritage and eco-conservation.',
-    openingHours: '08:00 - 17:00',
-    price: 'Rp 2.500.000',
-    bestTime: 'Early Morning (7am - 10am)',
-    positiveImpact:
-      '100% of your tour fee goes directly towards forest reforestation projects and supporting local indigenous communities who manage the reserve.',
-    facilities: [
-      { name: 'Parking', icon: 'car-outline' },
-      { name: 'Restroom', icon: 'woman-outline' },
-      { name: 'Cafe', icon: 'cafe-outline' },
-      { name: 'Tours', icon: 'walk-outline' },
-    ],
-    mapImage: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000',
-    rating: '4.9',
-    reviews: [
-      {
-        id: 'r1',
-        rating: 5,
-        text: '"A surprisingly peaceful escape from the city. The guided tour was excellent and we learned so much about nature conservation."',
-        author: 'Sarah A.',
-        time: '2 weeks ago',
-        avatarText: 'SA',
-      },
-      {
-        id: 'r2',
-        rating: 5,
-        text: '"Beautifully maintained space and friendly staff. Make sure to bring insect spray!"',
-        author: 'Mark J.',
-        time: '1 month ago',
-        avatarText: 'MJ',
-      },
-    ],
-  },
-  'komodo-green-sailing': {
-    id: 'komodo-green-sailing',
-    title: 'Komodo Island Eco Sailing',
-    badge: 'SUSTAINABLE',
-    location: 'Labuan Bajo, NTT',
-    image: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?q=80&w=1000',
-    description:
-      'Zero-waste boat trip visiting Komodo National Park and coral protection sites. Sail responsibly through pristine waters and witness incredible marine life.',
-    openingHours: '06:00 - 18:00',
-    price: 'Rp 4.800.000',
-    bestTime: 'Sunrise & Early Morning',
-    positiveImpact:
-      'Part of the trip proceeds funds marine protection initiatives and reef restoration programs in Labuan Bajo.',
-    facilities: [
-      { name: 'Boat', icon: 'boat-outline' },
-      { name: 'Restroom', icon: 'woman-outline' },
-      { name: 'Meals', icon: 'restaurant-outline' },
-      { name: 'Guide', icon: 'compass-outline' },
-    ],
-    mapImage: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000',
-    rating: '5.0',
-    reviews: [
-      {
-        id: 'r1',
-        rating: 5,
-        text: '"Unbelievable experience! Seeing the Komodo dragons and pristine reefs while staying eco-conscious was perfect."',
-        author: 'Alex R.',
-        time: '3 weeks ago',
-        avatarText: 'AR',
-      },
-    ],
-  },
-};
-
 export default function TripDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Fallback data jika ID yang dikirim dari rute tidak ada di dictionary
-  const selectedTrip = (id && TRIPS_DETAIL_DATA[id as string]) || {
-    id: id || 'default',
-    title: 'Batam Botanical Forest',
-    badge: 'SUSTAINABLE',
-    location: 'Batam, Riau Islands',
-    image: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1000',
-    description:
-      'Immerse yourself in the rich biodiversity of the Riau archipelago. This protected sanctuary spans over 200 hectares, offering tranquil nature walks beneath towering canopies, curated collections of rare tropical flora, and a deep commitment to environmental conservation.',
-    openingHours: '08:00 - 17:00',
-    price: 'Rp 50.000',
-    bestTime: 'Early Morning (7am - 10am)',
-    positiveImpact:
-      '100% of your entry fee goes directly towards forest reforestation projects and supporting local indigenous communities who manage the reserve.',
-    facilities: [
-      { name: 'Parking', icon: 'car-outline' },
-      { name: 'Restroom', icon: 'woman-outline' },
-      { name: 'Cafe', icon: 'cafe-outline' },
-      { name: 'Tours', icon: 'walk-outline' },
-    ],
-    mapImage: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000',
-    rating: '4.8',
-    reviews: [
-      {
-        id: 'r1',
-        rating: 5,
-        text: '"A surprisingly peaceful escape from the city. The guided tour was excellent and we learned so much."',
-        author: 'Sarah A.',
-        time: '2 weeks ago',
-        avatarText: 'SA',
-      },
-      {
-        id: 'r2',
-        rating: 5,
-        text: '"Beautifully maintained space and friendly guides. Highly recommended!"',
-        author: 'Mark J.',
-        time: '1 month ago',
-        avatarText: 'MJ',
-      },
-    ],
+  const [destination, setDestination] = useState<Destination | null>(null);
+  const [ratingData, setRatingData] = useState<RatingResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        const [dest, ratings] = await Promise.all([
+          destinationService.getDestinationById(id),
+          ratingService.getRatings('destination', id).catch(() => null),
+        ]);
+        setDestination(dest);
+        setRatingData(ratings);
+      } catch (e) {
+        console.error('Failed to load destination detail', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
+
+  const handleOpenDirections = () => {
+    if (destination?.directions_url) {
+      Linking.openURL(destination.directions_url);
+    } else if (destination?.latitude && destination?.longitude) {
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}`);
+    }
   };
 
+  const handleCall = () => {
+    if (destination?.phone) {
+      Linking.openURL(`tel:${destination.phone}`);
+    }
+  };
+
+  const handleShare = async () => {
+    if (destination) {
+      try {
+        await Share.share({
+          message: `Kunjungi ${destination.name} di Batam! Destinasi ramah lingkungan dengan Eco Score ${destination.eco_score}.`,
+          url: destination.share_url,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" color="#0E4D3C" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!destination) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={styles.errorText}>Destinasi tidak ditemukan.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>Kembali</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.mainContainer}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header Image Area */}
-        <View style={styles.imageHeaderContainer}>
-          <Image source={{ uri: selectedTrip.image }} style={styles.headerImage} />
-          
-          <SafeAreaView style={styles.headerTopOverlay} edges={['top']}>
-            <TouchableOpacity style={styles.iconCircle} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={20} color="#1E293B" />
+        {/* Main Image Banner */}
+        <View style={styles.bannerContainer}>
+          <Image
+            source={{ uri: destination.photos?.[0] || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1000' }}
+            style={styles.bannerImage}
+          />
+          {/* Top Bar Floating Buttons */}
+          <SafeAreaView style={styles.topFloatBar} edges={['top']}>
+            <TouchableOpacity style={styles.roundIconBtn} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={20} color="#0E4D3C" />
             </TouchableOpacity>
-
-            <Text style={styles.headerNavTitle}>Destination Details</Text>
-
-            <TouchableOpacity style={styles.iconCircle}>
-              <Ionicons name="heart-outline" size={20} color="#1E293B" />
-            </TouchableOpacity>
+            <View style={styles.rightFloatGroup}>
+              <TouchableOpacity style={styles.roundIconBtn} onPress={handleShare}>
+                <Ionicons name="share-social-outline" size={18} color="#0E4D3C" />
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
         </View>
 
-        {/* Content Sheet */}
-        <View style={styles.contentSheet}>
-          {/* Badge & Location */}
-          <View style={styles.metaRow}>
-            <View style={styles.badgeContainer}>
-              <Ionicons name="leaf" size={12} color="#1E5642" style={{ marginRight: 4 }} />
-              <Text style={styles.badgeText}>{selectedTrip.badge}</Text>
+        {/* Content Body */}
+        <View style={styles.contentBody}>
+          {/* Badge & Rating Row */}
+          <View style={styles.tagRow}>
+            <View style={styles.ecoBadge}>
+              <Ionicons name="leaf-outline" size={12} color="#0E4D3C" />
+              <Text style={styles.ecoBadgeText}>Eco Score {destination.eco_score ? destination.eco_score.toFixed(1) : '85.0'}</Text>
             </View>
-            <View style={styles.locationContainer}>
-              <Ionicons name="location-outline" size={14} color="#64748B" />
-              <Text style={styles.locationText}>{selectedTrip.location}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{destination.category.toUpperCase()}</Text>
             </View>
           </View>
 
-          {/* Title */}
-          <Text style={styles.title}>{selectedTrip.title}</Text>
-
-          {/* Description */}
-          <Text style={styles.description}>{selectedTrip.description}</Text>
+          {/* Title & Location */}
+          <Text style={styles.titleText}>{destination.name}</Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color="#64748B" />
+            <Text style={styles.locationText}>{destination.location}</Text>
+          </View>
 
           {/* Key Info Cards */}
-          <View style={styles.infoCardsRow}>
-            <View style={[styles.infoCard, { flex: 1, marginRight: 8 }]}>
-              <Ionicons name="time-outline" size={18} color="#1E5642" />
-              <Text style={styles.infoLabel}>OPENING HOURS</Text>
-              <Text style={styles.infoValue}>{selectedTrip.openingHours}</Text>
+          <View style={styles.infoCardsGrid}>
+            <View style={styles.infoCard}>
+              <Ionicons name="time-outline" size={18} color="#0E4D3C" />
+              <Text style={styles.infoCardLabel}>Jam Buka</Text>
+              <Text style={styles.infoCardValue}>{destination.opening_hours || '08:00 - 17:00'}</Text>
             </View>
-
-            <View style={[styles.infoCard, { flex: 1, marginLeft: 8 }]}>
-              <Ionicons name="wallet-outline" size={18} color="#1E5642" />
-              <Text style={styles.infoLabel}>ENTRY FEE</Text>
-              <Text style={styles.infoValue}>{selectedTrip.price}</Text>
+            <View style={styles.infoCard}>
+              <Ionicons name="ticket-outline" size={18} color="#0E4D3C" />
+              <Text style={styles.infoCardLabel}>Tiket Masuk</Text>
+              <Text style={styles.infoCardValue}>
+                {destination.ticket_price > 0 ? `Rp ${destination.ticket_price.toLocaleString('id-ID')}` : 'Gratis'}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.infoCardFull}>
-            <Ionicons name="sunny-outline" size={18} color="#1E5642" />
-            <Text style={styles.infoLabel}>BEST TIME</Text>
-            <Text style={styles.infoValue}>{selectedTrip.bestTime}</Text>
-          </View>
+          {/* Description */}
+          <Text style={styles.sectionHeading}>Tentang Destinasi</Text>
+          <Text style={styles.bodyParagraph}>{destination.description}</Text>
 
           {/* Positive Impact Card */}
-          <View style={styles.impactCard}>
-            <View style={styles.impactIconCircle}>
-              <Ionicons name="leaf-outline" size={20} color="#E2EFE9" />
-            </View>
-            <View style={styles.impactContent}>
-              <Text style={styles.impactTitle}>Positive Impact</Text>
-              <Text style={styles.impactText}>{selectedTrip.positiveImpact}</Text>
-            </View>
-          </View>
-
-          {/* Facilities Section */}
-          <Text style={styles.sectionTitle}>Facilities</Text>
-          <View style={styles.facilitiesRow}>
-            {selectedTrip.facilities.map((fac: any, index: number) => (
-              <View key={index} style={styles.facilityItem}>
-                <View style={styles.facilityIconCircle}>
-                  <Ionicons name={fac.icon as any} size={20} color="#1E5642" />
-                </View>
-                <Text style={styles.facilityName}>{fac.name}</Text>
+          {destination.conservation_contribution_pct > 0 && (
+            <View style={styles.impactCard}>
+              <View style={styles.impactIconCircle}>
+                <Ionicons name="heart" size={16} color="#FFFFFF" />
               </View>
-            ))}
-          </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.impactTitle}>Kontribusi Konservasi</Text>
+                <Text style={styles.impactDesc}>
+                  {destination.conservation_contribution_pct}% dari tiket masuk dialokasikan langsung untuk program pelestarian alam dan komunitas lokal Batam.
+                </Text>
+              </View>
+            </View>
+          )}
 
-          {/* Location / Map Section */}
-          <Text style={styles.sectionTitle}>Location</Text>
-          <View style={styles.mapContainer}>
-            <Image source={{ uri: selectedTrip.mapImage }} style={styles.mapImage} />
-            <TouchableOpacity
-              style={styles.openMapBtn}
-              onPress={() =>
-                Linking.openURL(
-                  `https://maps.google.com/?q=${encodeURIComponent(selectedTrip.location)}`
-                )
-              }
-            >
-              <Ionicons name="open-outline" size={14} color="#1E293B" style={{ marginRight: 6 }} />
-              <Text style={styles.openMapText}>Open in Maps</Text>
+          {/* Facilities */}
+          {destination.facilities && destination.facilities.length > 0 && (
+            <>
+              <Text style={styles.sectionHeading}>Fasilitas</Text>
+              <View style={styles.facilitiesWrap}>
+                {destination.facilities.map((fac, idx) => (
+                  <View key={idx} style={styles.facilityPill}>
+                    <Ionicons name="checkmark-circle-outline" size={14} color="#0E4D3C" />
+                    <Text style={styles.facilityText}>{fac}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Quick Action Buttons */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleOpenDirections}>
+              <Ionicons name="navigate-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.actionBtnTextPrimary}>Petunjuk Arah</Text>
             </TouchableOpacity>
+
+            {destination.phone && (
+              <TouchableOpacity style={styles.actionBtnSecondary} onPress={handleCall}>
+                <Ionicons name="call-outline" size={18} color="#0E4D3C" />
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* Visitor Reviews Section */}
-          <View style={styles.reviewsHeader}>
-            <Text style={styles.sectionTitle}>Visitor Reviews</Text>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingScore}>{selectedTrip.rating}</Text>
-              <Ionicons name="star" size={14} color="#1E5642" style={{ marginLeft: 4 }} />
-            </View>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewsScroll}>
-            {selectedTrip.reviews.map((rev: any) => (
-              <View key={rev.id} style={styles.reviewCard}>
-                <View style={styles.starsRow}>
-                  {[...Array(rev.rating)].map((_, i) => (
-                    <Ionicons key={i} name="star" size={12} color="#D97706" style={{ marginRight: 2 }} />
-                  ))}
-                </View>
-                <Text style={styles.reviewText}>{rev.text}</Text>
-
-                <View style={styles.authorRow}>
-                  <View style={styles.authorAvatar}>
-                    <Text style={styles.avatarText}>{rev.avatarText}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.authorName}>{rev.author}</Text>
-                    <Text style={styles.reviewTime}>{rev.time}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
         </View>
       </ScrollView>
     </View>
@@ -277,35 +205,25 @@ export default function TripDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  imageHeaderContainer: {
-    height: 320,
-    width: '100%',
-    position: 'relative',
-  },
-  headerImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  headerTopOverlay: {
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  scrollContent: { paddingBottom: 60 },
+  errorText: { color: '#64748B', fontSize: 15, marginBottom: 12 },
+  backBtn: { backgroundColor: '#0E4D3C', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  backBtnText: { color: '#FFFFFF', fontWeight: 'bold' },
+  bannerContainer: { position: 'relative', width: width, height: 280 },
+  bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  topFloatBar: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
   },
-  iconCircle: {
+  rightFloatGroup: { flexDirection: 'row', gap: 8 },
+  roundIconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -313,246 +231,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerNavTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  contentSheet: {
+  contentBody: {
+    padding: 20,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -28,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -20,
   },
-  metaRow: {
+  tagRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  ecoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E6F4EE',
+    backgroundColor: '#E2EFE9',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    marginRight: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#1E5642',
-    letterSpacing: 0.5,
+  ecoBadgeText: { fontSize: 11, fontWeight: '700', color: '#0E4D3C' },
+  categoryBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#64748B',
-    marginLeft: 4,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#1E293B',
-    lineHeight: 32,
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  infoCardsRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
+  categoryBadgeText: { fontSize: 11, fontWeight: '700', color: '#475569' },
+  titleText: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginBottom: 6 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 20 },
+  locationText: { fontSize: 13, color: '#64748B' },
+  infoCardsGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   infoCard: {
-    backgroundColor: '#F3FAF7',
+    flex: 1,
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  infoCardFull: {
-    backgroundColor: '#F3FAF7',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 20,
-  },
-  infoLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-    marginTop: 6,
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginTop: 2,
-  },
+  infoCardLabel: { fontSize: 11, color: '#64748B', marginTop: 6 },
+  infoCardValue: { fontSize: 13, fontWeight: '700', color: '#0F172A', marginTop: 2 },
+  sectionHeading: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 10, marginTop: 8 },
+  bodyParagraph: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 16 },
   impactCard: {
-    backgroundColor: '#1E4638',
-    borderRadius: 18,
-    padding: 18,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+    backgroundColor: '#E6F4EA',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
   },
   impactIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  impactContent: {
-    flex: 1,
-  },
-  impactTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 6,
-  },
-  impactText: {
-    fontSize: 12,
-    color: '#D1E5DD',
-    lineHeight: 18,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 14,
-  },
-  facilitiesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  facilityItem: {
-    alignItems: 'center',
-    width: (width - 40) / 4 - 8,
-  },
-  facilityIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#F3FAF7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  facilityName: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  mapContainer: {
-    height: 160,
-    borderRadius: 18,
-    overflow: 'hidden',
-    position: 'relative',
-    marginBottom: 24,
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  openMapBtn: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  openMapText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  reviewsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingScore: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  reviewsScroll: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  reviewCard: {
-    backgroundColor: '#F8FAF9',
-    borderRadius: 16,
-    padding: 14,
-    width: width * 0.65,
-    marginRight: 12,
-    justifyContent: 'space-between',
-  },
-  starsRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  reviewText: {
-    fontSize: 12,
-    color: '#475569',
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  authorAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#2D6A4F',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
   },
-  avatarText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
+  impactTitle: { fontSize: 13, fontWeight: '800', color: '#1B4332' },
+  impactDesc: { fontSize: 12, color: '#2D6A4F', marginTop: 2, lineHeight: 16 },
+  facilitiesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  facilityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
-  authorName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
+  facilityText: { fontSize: 12, color: '#334155', fontWeight: '500' },
+  actionsContainer: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  actionBtnPrimary: {
+    flex: 1,
+    backgroundColor: '#0E4D3C',
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  reviewTime: {
-    fontSize: 10,
-    color: '#94A3B8',
+  actionBtnTextPrimary: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  actionBtnSecondary: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#E2EFE9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

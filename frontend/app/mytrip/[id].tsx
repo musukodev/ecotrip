@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { tripService, TripFullResponse, Activity } from '@/services/tripService';
+import { chatService, ChatMessage } from '@/services/chatService';
+import { ratingService } from '@/services/ratingService';
+import { destinationService, Destination } from '@/services/destinationService';
+import { accommodationService, Accommodation } from '@/services/accommodationService';
 
 const Colors = {
   primary: '#0D2B22',
@@ -23,43 +31,276 @@ const Colors = {
   sun: '#F5A623',
   white: '#FFFFFF',
   gold: '#FBC02D',
+  accent: '#2D6A4F',
 };
+
+function parseToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return h * 60 + m;
+}
+
+function isActivityOngoing(activities: Activity[], index: number): boolean {
+  if (!activities || activities.length === 0) return false;
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const startMin = parseToMinutes(activities[index].start_time);
+  let endMin: number;
+  if (index < activities.length - 1) {
+    endMin = parseToMinutes(activities[index + 1].start_time);
+  } else {
+    const dur = activities[index].duration_minutes || 120;
+    endMin = startMin + dur;
+  }
+  return currentMinutes >= startMin && currentMinutes < endMin;
+}
+
+function isActivityPassed(activities: Activity[], index: number): boolean {
+  if (!activities || activities.length === 0) return false;
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const startMin = parseToMinutes(activities[index].start_time);
+  let endMin: number;
+  if (index < activities.length - 1) {
+    endMin = parseToMinutes(activities[index + 1].start_time);
+  } else {
+    const dur = activities[index].duration_minutes || 120;
+    endMin = startMin + dur;
+  }
+  return currentMinutes >= endMin;
+}
 
 export default function MyTripDetailScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
+  const [tripData, setTripData] = useState<TripFullResponse | null>(null);
+  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [mainTab, setMainTab] = useState<'itinerary' | 'costs'>('itinerary');
-  const [subTab, setSubTab] = useState<'trip' | 'crossing'>('trip');
-  const [selectedDay, setSelectedDay] = useState('D2');
+  const [loading, setLoading] = useState(true);
+
+  // Cached Master Venues for fallback matching
+  const [allDests, setAllDests] = useState<Destination[]>([]);
+  const [allAccs, setAllAccs] = useState<Accommodation[]>([]);
+
+  // Chat AI State
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
+
+  // Rating Modal State
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState<{
+    type: 'destination' | 'accommodation';
+    id: number;
+    title: string;
+  } | null>(null);
+  const [cleanliness, setCleanliness] = useState(5);
+  const [envCondition, setEnvCondition] = useState(5);
+  const [envCare, setEnvCare] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  const fetchVenues = async () => {
+    try {
+      const [dests, accs] = await Promise.all([
+        destinationService.getDestinations(),
+        accommodationService.getAccommodations(),
+      ]);
+      setAllDests(dests);
+      setAllAccs(accs);
+    } catch (e) {
+      console.error('Failed to load master venues', e);
+    }
+  };
+
+  const fetchTrip = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const full = await tripService.getTripFull(id);
+      setTripData(full);
+    } catch (e) {
+      console.error('Failed to load trip', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchChatHistory = async () => {
+    if (!id) return;
+    try {
+      const msgs = await chatService.getChatHistory(id);
+      setChatMessages(msgs);
+    } catch (e) {
+      console.error('Failed to load chat history', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrip();
+    fetchVenues();
+  }, [id]);
+
+  const handleOpenChat = () => {
+    setChatModalVisible(true);
+    fetchChatHistory();
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !id) return;
+    const msg = inputMessage.trim();
+    setInputMessage('');
+
+    const tempUserMsg: ChatMessage = {
+      id: Date.now(),
+      trip_id: Number(id),
+      sender: 'user',
+      message: msg,
+      created_at: new Date().toISOString(),
+    };
+    setChatMessages((prev) => [...prev, tempUserMsg]);
+    setSendingChat(true);
+
+    try {
+      const res = await chatService.sendMessage(id, msg);
+      if (res.ai_message) {
+        setChatMessages((prev) => [...prev, res.ai_message]);
+      }
+      if (res.is_revision) {
+        fetchTrip();
+      }
+    } catch (e) {
+      console.error('Chat error', e);
+    } finally {
+      setSendingChat(false);
+    }
+  };
+
+  const handleHentikanTrip = async () => {
+    if (!id) return;
+    Alert.alert('Hentikan Trip', 'Apakah kamu yakin ingin menghentikan / mengarsipkan trip ini?', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hentikan',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await tripService.updateStatus(id, 'archived');
+            Alert.alert('Sukses', 'Trip telah dibatalkan.');
+            router.replace('/(tabs)/');
+          } catch (e) {
+            Alert.alert('Gagal', 'Gagal menghentikan trip.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const openRatingModal = (act: Activity) => {
+    if (act.destination_id) {
+      setRatingTarget({ type: 'destination', id: act.destination_id, title: act.title });
+    } else if (act.accommodation_id) {
+      setRatingTarget({ type: 'accommodation', id: act.accommodation_id, title: act.title });
+    } else {
+      const actTitleLower = act.title.toLowerCase();
+      const matchedDest = allDests.find(
+        (d) => actTitleLower.includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(actTitleLower)
+      );
+      if (matchedDest) {
+        setRatingTarget({ type: 'destination', id: matchedDest.id, title: matchedDest.name });
+      } else {
+        const matchedAcc = allAccs.find(
+          (a) => actTitleLower.includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(actTitleLower)
+        );
+        if (matchedAcc) {
+          setRatingTarget({ type: 'accommodation', id: matchedAcc.id, title: matchedAcc.name });
+        } else if (allDests.length > 0) {
+          setRatingTarget({ type: 'destination', id: allDests[0].id, title: act.title });
+        } else {
+          Alert.alert('Info', 'Belum ada data venue untuk diberi rating.');
+          return;
+        }
+      }
+    }
+    setCleanliness(5);
+    setEnvCondition(5);
+    setEnvCare(5);
+    setReviewComment('');
+    setRatingModalVisible(true);
+  };
+
+  const handleSendRating = async () => {
+    if (!ratingTarget || !id) return;
+    setSubmittingRating(true);
+    try {
+      const res = await ratingService.submitRating({
+        target_type: ratingTarget.type,
+        target_id: ratingTarget.id,
+        trip_id: Number(id),
+        cleanliness,
+        environmental_condition: envCondition,
+        environmental_care: envCare,
+        review_comment: reviewComment,
+      });
+
+      const score = res.rating?.calculated_score || ((cleanliness * 20 * 0.35) + (envCondition * 20 * 0.40) + (envCare * 20 * 0.25));
+      Alert.alert(
+        'Penilaian Berhasil!',
+        `Terima kasih! Penilaian Eco Score kamu sebesar ${score.toFixed(1)}/100 telah berhasil disimpan dan mempengaruhi ranking rekomendasi Batam.`
+      );
+      setRatingModalVisible(false);
+    } catch (e: any) {
+      Alert.alert('Gagal', e.response?.data?.error || 'Gagal mengirim rating.');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!tripData || !tripData.trip) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyText}>Trip tidak ditemukan.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Kembali</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const { trip, days } = tripData;
+  const currentDay = days && days.length > 0 ? (days[selectedDayIdx] || days[0]) : null;
 
   return (
     <View style={styles.container}>
-      {/* 1. Header Navigation Bar */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={Colors.primary} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>
-            {mainTab === 'costs' ? 'Singapore-Batam' : 'Batam – Singapore'}
-          </Text>
-          {mainTab === 'itinerary' && (
-            <Text style={styles.headerSubtitle}>v3 · View history</Text>
-          )}
+          <Text style={styles.headerTitle}>{trip.title}</Text>
+          <Text style={styles.headerSubtitle}>v{trip.current_version} · {trip.origin_port || 'Batam'} ➔ Batam</Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn}>
-          {mainTab === 'costs' ? (
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300' }}
-              style={styles.headerAvatar}
-            />
-          ) : (
-            <Ionicons name="share-outline" size={18} color={Colors.primary} />
-          )}
+        <TouchableOpacity style={styles.iconBtn} onPress={handleHentikanTrip}>
+          <Ionicons name="stop-circle-outline" size={20} color="#E63946" />
         </TouchableOpacity>
       </View>
 
-      {/* 2. Main Tab Switcher */}
+      {/* Main Tab Switcher */}
       <View style={styles.topTabBarContainer}>
         <View style={styles.topTabBar}>
           <TouchableOpacity
@@ -75,810 +316,505 @@ export default function MyTripDetailScreen() {
             onPress={() => setMainTab('costs')}
           >
             <Text style={[styles.topTabText, mainTab === 'costs' && styles.topTabTextActive]}>
-              Costs
+              Estimasi Biaya
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* TAMPILAN TAB: COSTS */}
-        {mainTab === 'costs' ? (
+        {mainTab === 'itinerary' ? (
           <View>
-            {/* Total Estimated Cost Card */}
-            <View style={styles.totalCostCard}>
-              <Text style={styles.totalCostLabel}>ESTIMATED TOTAL</Text>
-              <Text style={styles.totalCostValue}>$ 150 - 250</Text>
-              <View style={styles.ecoImpactBadge}>
-                <Ionicons name="leaf-outline" size={12} color={Colors.white} />
-                <Text style={styles.ecoImpactText}>High Eco-Impact Trip</Text>
+            {/* Days Pill Selector */}
+            {days && days.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daysScroll}>
+                {days.map((d, index) => {
+                  const active = selectedDayIdx === index;
+                  return (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={[styles.dayPill, active && styles.dayPillActive]}
+                      onPress={() => setSelectedDayIdx(index)}
+                    >
+                      <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>
+                        Hari {d.day_number}
+                      </Text>
+                      <Text style={[styles.dayPillSub, active && styles.dayPillSubActive]}>
+                        {d.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Weather & Eco Score Bar */}
+            <View style={styles.infoBanner}>
+              <View style={styles.bannerCol}>
+                <Ionicons name="leaf-outline" size={16} color={Colors.accent} />
+                <Text style={styles.bannerText}>Sustainability {trip.sustainability_score}/100</Text>
+              </View>
+              <View style={styles.bannerCol}>
+                <Ionicons name="sunny-outline" size={16} color={Colors.sun} />
+                <Text style={styles.bannerText}>29°C · Batam</Text>
               </View>
             </View>
 
-            {/* Bookable Expenses Title */}
-            <Text style={styles.sectionTitle}>Bookable Expenses</Text>
+            {/* Activities List */}
+            {currentDay && currentDay.activities && currentDay.activities.length > 0 ? (
+              currentDay.activities.map((act, index) => {
+                const isCurrent = isActivityOngoing(currentDay.activities, index);
+                const isPassed = isActivityPassed(currentDay.activities, index);
 
-            {/* Card 1: Ferry Crossing */}
-            <View style={styles.expenseCard}>
-              <View style={styles.expenseImageWrapper}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600' }}
-                  style={styles.expenseImage}
-                />
-                <View style={styles.imageOverlayBadge}>
-                  <Ionicons name="boat-outline" size={12} color={Colors.white} />
-                  <Text style={styles.imageOverlayText}>Ferry Crossing</Text>
-                </View>
-              </View>
-              <View style={styles.expenseContent}>
-                <View style={styles.expenseRow}>
-                  <Text style={styles.expenseTitle}>Eco-Friendly Vessel</Text>
-                  <Text style={styles.expensePrice}>$70.00</Text>
-                </View>
-                <Text style={styles.expenseSub}>Singapore → Batam (Return)</Text>
-                <TouchableOpacity style={styles.bookBtn}>
-                  <Text style={styles.bookBtnText}>BOOK TICKET</Text>
-                  <Ionicons name="open-outline" size={12} color={Colors.primary} />
-                </TouchableOpacity>
-                <Text style={styles.redirectText}>Redirects to external booking platform</Text>
-              </View>
-            </View>
+                return (
+                  <View
+                    key={act.id}
+                    style={[
+                      styles.activityCard,
+                      isCurrent && styles.activityCardHighlighted,
+                      isPassed && styles.activityCardPassed,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.timeTag,
+                        isCurrent && styles.timeTagHighlighted,
+                        isPassed && styles.timeTagPassed,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.timeText,
+                          isCurrent && styles.timeTextHighlighted,
+                          isPassed && styles.timeTextPassed,
+                        ]}
+                      >
+                        {act.start_time ? act.start_time.substring(0, 5) : '08:00'}
+                      </Text>
+                      {isCurrent && <View style={styles.liveDot} />}
+                      {isPassed && !isCurrent && (
+                        <Ionicons name="checkmark-circle" size={12} color="#15803D" style={{ marginTop: 2 }} />
+                      )}
+                    </View>
 
-            {/* Card 2: Accommodation */}
-            <View style={styles.expenseCard}>
-              <View style={styles.expenseImageWrapper}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=600' }}
-                  style={styles.expenseImage}
-                />
-                <View style={styles.imageOverlayBadge}>
-                  <Ionicons name="bed-outline" size={12} color={Colors.white} />
-                  <Text style={styles.imageOverlayText}>Accommodation</Text>
-                </View>
+                    <View style={styles.activityBody}>
+                      <View style={styles.actHeader}>
+                        <View style={{ flex: 1 }}>
+                          {isCurrent && (
+                            <View style={styles.ongoingBadge}>
+                              <Ionicons name="time" size={10} color="#FFFFFF" />
+                              <Text style={styles.ongoingBadgeText}>LOKASI SAAT INI</Text>
+                            </View>
+                          )}
+                          {isPassed && !isCurrent && (
+                            <View style={styles.passedBadge}>
+                              <Ionicons name="checkmark" size={10} color="#15803D" />
+                              <Text style={styles.passedBadgeText}>SUDAH DIKUNJUNGI</Text>
+                            </View>
+                          )}
+                          <Text style={[styles.actTitle, isCurrent && styles.actTitleHighlighted]}>
+                            {act.title}
+                          </Text>
+                        </View>
+                        <View style={[styles.categoryBadge, isCurrent && styles.categoryBadgeHighlighted]}>
+                          <Text style={[styles.categoryBadgeText, isCurrent && styles.categoryBadgeTextHighlighted]}>
+                            {act.category}
+                          </Text>
+                        </View>
+                      </View>
+                      {act.description ? (
+                        <Text style={[styles.actDesc, isCurrent && styles.actDescHighlighted]}>
+                          {act.description}
+                        </Text>
+                      ) : null}
+                      <View style={styles.actFooter}>
+                        <Text style={[styles.actMeta, isCurrent && styles.actMetaHighlighted]}>
+                          💰 Rp {act.estimated_cost.toLocaleString('id-ID')}
+                        </Text>
+                        <Text style={[styles.actMeta, isCurrent && styles.actMetaHighlighted]}>
+                          ⏱️ {act.duration_minutes || 60} Menit
+                        </Text>
+                      </View>
+
+                      {/* Tombol Beri Rating Eco */}
+                      <TouchableOpacity
+                        style={styles.ratingTriggerBtn}
+                        onPress={() => openRatingModal(act)}
+                      >
+                        <Ionicons name="star" size={14} color="#D97706" />
+                        <Text style={styles.ratingTriggerBtnText}>Beri Rating Eco Tempat Ini</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyActivity}>
+                <Text style={styles.emptyText}>Tidak ada aktivitas di hari ini.</Text>
               </View>
-              <View style={styles.expenseContent}>
-                <View style={styles.expenseRow}>
-                  <Text style={styles.expenseTitle}>Nirwana Eco Resort</Text>
-                  <Text style={styles.expensePrice}>$120.00 / night</Text>
-                </View>
-                <Text style={styles.expenseSub}>Estimated for 2 nights</Text>
-                <TouchableOpacity style={styles.bookBtn}>
-                  <Text style={styles.bookBtnText}>BOOK NOW</Text>
-                  <Ionicons name="open-outline" size={12} color={Colors.primary} />
-                </TouchableOpacity>
-                <Text style={styles.redirectText}>Redirects to external booking platform</Text>
-              </View>
-            </View>
+            )}
           </View>
         ) : (
-          /* TAMPILAN TAB: ITINERARY */
+          /* TAB ESTIMASI BIAYA */
           <View>
-            {/* AI Validation Badge */}
-            <View style={styles.aiBanner}>
-              <Ionicons name="checkmark-sharp" size={14} color={Colors.primary} />
-              <Text style={styles.aiBannerText}>
-                AI Validated · distance, time & emissions checked
+            <View style={styles.costCard}>
+              <Text style={styles.costLabel}>ESTIMASI BIAYA TOTAL PERJALANAN</Text>
+              <Text style={styles.costValue}>
+                Rp {trip.total_estimated_cost.toLocaleString('id-ID')}
+              </Text>
+              <Text style={styles.budgetMeta}>
+                Budget Maksimal: Rp {trip.budget.toLocaleString('id-ID')} ({trip.pax} Orang)
               </Text>
             </View>
 
-            {/* Map View Card */}
-            <View style={styles.mapContainer}>
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600' }}
-                style={styles.mapImage}
-              />
-              <View style={styles.mapBadge}>
-                <Text style={styles.mapBadgeText}>Map View</Text>
-              </View>
-              <TouchableOpacity style={styles.locationPinBtn}>
-                <Ionicons name="compass-outline" size={18} color={Colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Sub-Tab Switcher */}
-            <View style={styles.subTabWrapper}>
-              <View style={styles.subTabBar}>
-                <TouchableOpacity
-                  style={[styles.subTabBtn, subTab === 'trip' && styles.subTabBtnActive]}
-                  onPress={() => setSubTab('trip')}
-                >
-                  <Text style={[styles.subTabText, subTab === 'trip' && styles.subTabTextActive]}>
-                    Trip
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.subTabBtn, subTab === 'crossing' && styles.subTabBtnActive]}
-                  onPress={() => setSubTab('crossing')}
-                >
-                  <Text style={[styles.subTabText, subTab === 'crossing' && styles.subTabTextActive]}>
-                    Crossing
-                  </Text>
-                </TouchableOpacity>
+            <View style={styles.breakdownCard}>
+              <Text style={styles.sectionHeading}>Rincian Alokasi Biaya</Text>
+              {trip.ferry_cost_round_trip > 0 && (
+                <View style={styles.costRow}>
+                  <Text style={styles.costRowLabel}>Tiket Feri PP ({trip.origin_port || 'Feri'} ➔ Batam)</Text>
+                  <Text style={styles.costRowVal}>Rp {trip.ferry_cost_round_trip.toLocaleString('id-ID')}</Text>
+                </View>
+              )}
+              <View style={styles.costRow}>
+                <Text style={styles.costRowLabel}>Akomodasi, Kuliner & Tiket Wisata</Text>
+                <Text style={styles.costRowVal}>
+                  Rp {(trip.total_estimated_cost - trip.ferry_cost_round_trip).toLocaleString('id-ID')}
+                </Text>
               </View>
             </View>
-
-            {/* KONTEN SUB-TAB: CROSSING */}
-            {subTab === 'crossing' ? (
-              <View style={styles.crossingContainer}>
-                {/* DEPARTURE */}
-                <Text style={styles.sectionHeaderTitle}>DEPARTURE</Text>
-                <View style={styles.crossingRow}>
-                  <Text style={styles.timelineTime}>07:30</Text>
-                  <View style={styles.timelineDot} />
-                  <View style={styles.activityCard}>
-                    <Text style={styles.activityTitle}>Singapore → Batam</Text>
-                    <View style={styles.crossingMetaRow}>
-                      <Text style={styles.crossingMetaText}>🚢 Eco-Friendly Vessel</Text>
-                      <Text style={styles.crossingMetaText}>•  💺 Seat 12C</Text>
-                    </View>
-                    <View style={styles.ecoBadgePill}>
-                      <Ionicons name="leaf" size={10} color={Colors.primary} />
-                      <Text style={styles.ecoBadgePillText}>Eco-Certified Route</Text>
-                    </View>
-                    <View style={styles.crossingFooter}>
-                      <Text style={styles.gateText}>⏰ Gate closes 07:15</Text>
-                      <TouchableOpacity style={styles.darkBookBtn}>
-                        <Text style={styles.darkBookBtnText}>Book Ticket</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-
-                {/* RETURN */}
-                <Text style={[styles.sectionHeaderTitle, { marginTop: 16 }]}>RETURN</Text>
-                <View style={styles.crossingRow}>
-                  <Text style={styles.timelineTime}>18:00</Text>
-                  <View style={[styles.timelineDot, { backgroundColor: '#A0AEC0' }]} />
-                  <View style={styles.activityCard}>
-                    <Text style={styles.activityTitle}>Batam → Singapore</Text>
-                    <View style={styles.crossingMetaRow}>
-                      <Text style={styles.crossingMetaText}>🚢 Eco-Friendly Vessel</Text>
-                      <Text style={styles.crossingMetaText}>•  💺 Seat 12C</Text>
-                    </View>
-                    <View style={styles.ecoBadgePill}>
-                      <Ionicons name="leaf" size={10} color={Colors.primary} />
-                      <Text style={styles.ecoBadgePillText}>Eco-Certified Route</Text>
-                    </View>
-                    <View style={styles.crossingFooter}>
-                      <Text style={styles.gateText}>⏰ Check-in by 17:30</Text>
-                      <TouchableOpacity style={styles.outlineBookBtn}>
-                        <Text style={styles.outlineBookBtnText}>Book Ticket</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            ) : (
-              /* KONTEN SUB-TAB: TRIP */
-              <View>
-                {/* Day Selector */}
-                <View style={styles.daySelectorContainer}>
-                  <View style={styles.dayDashedLine} />
-                  <View style={styles.dayCirclesRow}>
-                    {['D1', 'D2', 'D3'].map((day) => {
-                      const active = selectedDay === day;
-                      return (
-                        <TouchableOpacity
-                          key={day}
-                          style={[styles.dayCircle, active && styles.dayCircleActive]}
-                          onPress={() => setSelectedDay(day)}
-                        >
-                          <Text style={[styles.dayCircleText, active && styles.dayCircleTextActive]}>
-                            {day}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Weather Info Card */}
-                <View style={styles.weatherCard}>
-                  <View style={styles.weatherLeft}>
-                    <Ionicons name="sunny" size={28} color={Colors.sun} />
-                    <View style={styles.weatherTextGroup}>
-                      <Text style={styles.weatherTemp}>29°C</Text>
-                      <Text style={styles.weatherDesc}>Partly cloudy</Text>
-                    </View>
-                  </View>
-                  <View style={styles.weatherRight}>
-                    <Text style={styles.weatherHumidityLabel}>Humidity</Text>
-                    <Text style={styles.weatherHumidityValue}>75%</Text>
-                  </View>
-                </View>
-
-                {/* Activities Timeline List */}
-                <View style={styles.timelineContainer}>
-                  <View style={styles.timelineRow}>
-                    <Text style={styles.timelineTime}>10:30</Text>
-                    <View style={styles.timelineDot} />
-                    <View style={styles.activityCard}>
-                      <Text style={styles.activityTitle}>Gardens by the Bay</Text>
-                      <View style={styles.tagPill}>
-                        <Text style={styles.tagPillText}>Nature</Text>
-                      </View>
-                      <Text style={styles.activityDescription}>
-                        Explore Cloud Forest & Supertree Grove.
-                      </Text>
-                      <View style={styles.activityFooter}>
-                        <Text style={styles.validatedText}>Distance & emission validated</Text>
-                        <TouchableOpacity style={styles.changeBtn}>
-                          <Text style={styles.changeBtnText}>Change</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.timelineRow}>
-                    <Text style={styles.timelineTime}>15:00</Text>
-                    <View style={styles.timelineDot} />
-                    <View style={styles.activityCard}>
-                      <Text style={styles.activityTitle}>Check-in Hotel Eco Bay</Text>
-                      <View style={styles.badgePill}>
-                        <Text style={styles.badgePillText}>Accommodation · Badge</Text>
-                        <Ionicons name="leaf" size={12} color={Colors.primary} />
-                      </View>
-                      <Text style={styles.activityDescription}>
-                        Green certified hotel near Marina Bay.
-                      </Text>
-                      <View style={styles.activityFooter}>
-                        <Text style={styles.validatedText}>Distance & emission validated</Text>
-                        <TouchableOpacity style={styles.changeBtn}>
-                          <Text style={styles.changeBtnText}>Change</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
           </View>
         )}
       </ScrollView>
 
       {/* Floating Chat Button */}
-      <TouchableOpacity style={styles.fabChat}>
-        <Ionicons name="chatbox-ellipses" size={20} color={Colors.white} />
+      <TouchableOpacity style={styles.chatFab} onPress={handleOpenChat}>
+        <Ionicons name="chatbubbles" size={22} color="#FFFFFF" />
+        <Text style={styles.chatFabText}>Tanya AI</Text>
       </TouchableOpacity>
+
+      {/* Modal Pop-up Rating 3 Aspek (Kebersihan 35%, Lingkungan 40%, Peduli 25%) */}
+      <Modal visible={ratingModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.ratingSheetContainer}>
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>Penilaian Eco Score</Text>
+                <Text style={styles.sheetSub} numberOfLines={1}>
+                  {ratingTarget?.title}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setRatingModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 18 }} showsVerticalScrollIndicator={false}>
+              {/* Aspek 1: Kebersihan */}
+              <View style={styles.aspectBox}>
+                <View style={styles.aspectHeader}>
+                  <Text style={styles.aspectTitle}>1. Kebersihan Lingkungan</Text>
+                  <Text style={styles.aspectWeight}>(Bobot 35%)</Text>
+                </View>
+                <Text style={styles.aspectDesc}>Pengelolaan sampah, kebersihan toilet, dan area bebas puntung/plastik.</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setCleanliness(star)} style={styles.starBtn}>
+                      <Ionicons
+                        name={cleanliness >= star ? 'star' : 'star-outline'}
+                        size={28}
+                        color={cleanliness >= star ? '#F59E0B' : '#CBD5E1'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <Text style={styles.starLabel}>{cleanliness} / 5</Text>
+                </View>
+              </View>
+
+              {/* Aspek 2: Kondisi Lingkungan */}
+              <View style={styles.aspectBox}>
+                <View style={styles.aspectHeader}>
+                  <Text style={styles.aspectTitle}>2. Kondisi Lingkungan & Alam</Text>
+                  <Text style={styles.aspectWeight}>(Bobot 40%)</Text>
+                </View>
+                <Text style={styles.aspectDesc}>Keasrian vegetasi, kualitas udara, minim polusi suara, dan kealamian tempat.</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setEnvCondition(star)} style={styles.starBtn}>
+                      <Ionicons
+                        name={envCondition >= star ? 'star' : 'star-outline'}
+                        size={28}
+                        color={envCondition >= star ? '#F59E0B' : '#CBD5E1'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <Text style={styles.starLabel}>{envCondition} / 5</Text>
+                </View>
+              </View>
+
+              {/* Aspek 3: Kepedulian Lingkungan */}
+              <View style={styles.aspectBox}>
+                <View style={styles.aspectHeader}>
+                  <Text style={styles.aspectTitle}>3. Kepedulian Lingkungan</Text>
+                  <Text style={styles.aspectWeight}>(Bobot 25%)</Text>
+                </View>
+                <Text style={styles.aspectDesc}>Edukasi ramah lingkungan, produk lokal, hemat energi, dan dukungan konservasi.</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setEnvCare(star)} style={styles.starBtn}>
+                      <Ionicons
+                        name={envCare >= star ? 'star' : 'star-outline'}
+                        size={28}
+                        color={envCare >= star ? '#F59E0B' : '#CBD5E1'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <Text style={styles.starLabel}>{envCare} / 5</Text>
+                </View>
+              </View>
+
+              {/* Komentar Ulasan */}
+              <Text style={styles.fieldHeading}>Ulasan Singkat (Opsional)</Text>
+              <TextInput
+                style={styles.reviewInput}
+                placeholder="Bagikan pengalaman ramah lingkungan kamu di tempat ini..."
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                multiline
+                numberOfLines={3}
+              />
+
+              {/* Tombol Kirim */}
+              <TouchableOpacity
+                style={[styles.submitRatingBtn, submittingRating && { opacity: 0.7 }]}
+                onPress={handleSendRating}
+                disabled={submittingRating}
+              >
+                {submittingRating ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitRatingBtnText}>Kirim Penilaian Eco</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Chat AI Modal Sheet */}
+      <Modal visible={chatModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.chatSheetContainer}>
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetTitle}>EcoTravel AI Assistant</Text>
+                <Text style={styles.sheetSub}>Ketik permintaan revisi atau tanya seputar Batam</Text>
+              </View>
+              <TouchableOpacity onPress={() => setChatModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.chatMessagesScroll} contentContainerStyle={{ padding: 16 }}>
+              {chatMessages.map((m, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.msgBubble,
+                    m.sender === 'user' ? styles.userMsg : m.sender === 'system' ? styles.systemMsg : styles.aiMsg,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.msgText,
+                      m.sender === 'user' ? { color: '#fff' } : { color: Colors.textPrimary },
+                    ]}
+                  >
+                    {m.message}
+                  </Text>
+                </View>
+              ))}
+              {sendingChat && (
+                <View style={[styles.msgBubble, styles.aiMsg]}>
+                  <ActivityIndicator size="small" color={Colors.accent} />
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.inputBar}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Contoh: ganti makan siang hari ke-2..."
+                value={inputMessage}
+                onChangeText={setInputMessage}
+              />
+              <TouchableOpacity style={styles.sendBtn} onPress={handleSendMessage}>
+                <Ionicons name="send" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
+  container: { flex: 1, backgroundColor: Colors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: Colors.textSecondary, fontSize: 14, marginBottom: 12 },
+  backBtn: { backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 45, paddingBottom: 12, backgroundColor: Colors.card },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  headerTitleContainer: { alignItems: 'center', flex: 1 },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.primary },
+  headerSubtitle: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  topTabBarContainer: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: Colors.card },
+  topTabBar: { flexDirection: 'row', backgroundColor: Colors.tabBackground, borderRadius: 20, padding: 4 },
+  topTabBtn: { flex: 1, paddingVertical: 8, borderRadius: 16, alignItems: 'center' },
+  topTabBtnActive: { backgroundColor: Colors.card },
+  topTabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  topTabTextActive: { color: Colors.primary, fontWeight: '700' },
+  scrollContent: { padding: 16, paddingBottom: 100 },
+  daysScroll: { flexDirection: 'row', marginBottom: 14 },
+  dayPill: { backgroundColor: Colors.card, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, borderWidth: 1, borderColor: Colors.border },
+  dayPillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  dayPillText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  dayPillTextActive: { color: Colors.white },
+  dayPillSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  dayPillSubActive: { color: Colors.tabBackground },
+  infoBanner: { flexDirection: 'row', backgroundColor: Colors.cardGreen, borderRadius: 14, padding: 12, justifyContent: 'space-around', marginBottom: 16 },
+  bannerCol: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  bannerText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+
+  // Activity Card Styling & Highlight
+  activityCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 12,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E6ECE8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerAvatar: {
-    width: 32,
-    height: 32,
+    backgroundColor: Colors.card,
     borderRadius: 16,
-  },
-  headerTitleContainer: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  topTabBarContainer: {
-    paddingHorizontal: 16,
+    padding: 14,
     marginBottom: 12,
-  },
-  topTabBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.tabBackground,
-    borderRadius: 12,
-    padding: 3,
-  },
-  topTabBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  topTabBtnActive: {
-    backgroundColor: Colors.primary,
-  },
-  topTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  topTabTextActive: {
-    color: Colors.white,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 90,
-  },
-  aiBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DDECE4',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-    marginBottom: 12,
-    alignSelf: 'center',
-  },
-  aiBannerText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  mapContainer: {
-    height: 160,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    marginBottom: 14,
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-  },
-  mapBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  mapBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  locationPinBtn: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  subTabWrapper: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  subTabBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.tabBackground,
-    borderRadius: 16,
-    padding: 3,
-    width: 170,
-  },
-  subTabBtn: {
-    flex: 1,
-    paddingVertical: 6,
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  subTabBtnActive: {
-    backgroundColor: Colors.white,
-  },
-  subTabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  subTabTextActive: {
-    color: Colors.primary,
-  },
-  daySelectorContainer: {
-    position: 'relative',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  dayDashedLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    borderWidth: 1,
-    borderColor: '#C2D1C9',
-    borderStyle: 'dashed',
-    top: '50%',
-  },
-  dayCirclesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-  },
-  dayCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    gap: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
   },
-  dayCircleActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  dayCircleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  dayCircleTextActive: {
-    color: Colors.white,
-  },
-  weatherCard: {
-    backgroundColor: Colors.cardGreen,
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E0EBE4',
-  },
-  weatherLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  weatherTextGroup: {
-    marginLeft: 10,
-  },
-  weatherTemp: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  weatherDesc: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  weatherRight: {
-    alignItems: 'flex-end',
-  },
-  weatherHumidityLabel: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-  weatherHumidityValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  timelineContainer: {
-    marginTop: 4,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  timelineTime: {
-    width: 44,
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  timelineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginTop: 8,
-    marginRight: 10,
-  },
-  activityCard: {
-    flex: 1,
-    backgroundColor: Colors.cardGreen,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E0EBE4',
-  },
-  activityTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: 6,
-  },
-  tagPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#D9E6DF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  tagPillText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#D9E6DF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  badgePillText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  activityDescription: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-    lineHeight: 16,
-  },
-  activityFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#D8E3DD',
-    paddingTop: 8,
-  },
-  validatedText: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-  changeBtn: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D8E3DD',
-  },
-  changeBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  fabChat: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+  activityCardHighlighted: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#22C55E',
+    borderWidth: 2,
     elevation: 4,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
-
-  /* CROSSING STYLES */
-  crossingContainer: {
-    marginTop: 8,
+  activityCardPassed: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
   },
-  sectionHeaderTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primary,
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  crossingRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  crossingMetaRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-  },
-  crossingMetaText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  ecoBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#D9E6DF',
+  timeTag: {
+    backgroundColor: Colors.background,
+    borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 12,
+    paddingVertical: 6,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  ecoBadgePillText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  crossingFooter: {
+  timeTagHighlighted: { backgroundColor: '#DCFCE7' },
+  timeTagPassed: { backgroundColor: '#F1F5F9' },
+  timeText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  timeTextHighlighted: { color: '#15803D', fontWeight: '800' },
+  timeTextPassed: { color: '#64748B' },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E', marginTop: 2 },
+  activityBody: { flex: 1 },
+  actHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+  ongoingBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#D8E3DD',
-    paddingTop: 8,
-  },
-  gateText: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-  darkBookBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  darkBookBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.white,
-  },
-  outlineBookBtn: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  outlineBookBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-
-  /* COSTS TAB STYLES */
-  totalCostCard: {
-    backgroundColor: Colors.primary,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  totalCostLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#A3B8B0',
-    letterSpacing: 1,
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    gap: 4,
     marginBottom: 4,
   },
-  totalCostValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.white,
-    marginBottom: 12,
-  },
-  ecoImpactBadge: {
+  ongoingBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 },
+  passedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginBottom: 4,
   },
-  ecoImpactText: {
-    fontSize: 11,
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: 12,
-  },
-  expenseCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-    elevation: 1,
-  },
-  expenseImageWrapper: {
-    height: 120,
-    width: '100%',
-    position: 'relative',
-  },
-  expenseImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlayBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(13, 43, 34, 0.8)',
+  passedBadgeText: { fontSize: 9, fontWeight: '800', color: '#15803D', letterSpacing: 0.5 },
+  actTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  actTitleHighlighted: { color: '#14532D', fontWeight: '800' },
+  categoryBadge: { backgroundColor: Colors.background, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 6 },
+  categoryBadgeHighlighted: { backgroundColor: '#DCFCE7' },
+  categoryBadgeText: { fontSize: 10, color: Colors.textSecondary, textTransform: 'capitalize' },
+  categoryBadgeTextHighlighted: { color: '#15803D', fontWeight: '700' },
+  actDesc: { fontSize: 12, color: Colors.textSecondary, marginBottom: 8 },
+  actDescHighlighted: { color: '#166534' },
+  actFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  actMeta: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
+  actMetaHighlighted: { color: '#15803D', fontWeight: '700' },
+  ratingTriggerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginTop: 8,
     gap: 4,
   },
-  imageOverlayText: {
-    color: Colors.white,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  expenseContent: {
-    padding: 14,
-  },
-  expenseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  expenseTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  expensePrice: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  expenseSub: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
-  bookBtn: {
-    backgroundColor: Colors.gold,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-    marginBottom: 6,
-  },
-  bookBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 0.5,
-  },
-  redirectText: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
+  ratingTriggerBtnText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
+
+  emptyActivity: { padding: 30, alignItems: 'center' },
+  costCard: { backgroundColor: Colors.card, borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
+  costLabel: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, marginBottom: 6 },
+  costValue: { fontSize: 24, fontWeight: '800', color: Colors.primary, marginBottom: 4 },
+  budgetMeta: { fontSize: 13, color: Colors.textSecondary },
+  breakdownCard: { backgroundColor: Colors.card, borderRadius: 16, padding: 16, marginBottom: 16 },
+  sectionHeading: { fontSize: 15, fontWeight: '700', color: Colors.primary, marginBottom: 12 },
+  costRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  costRowLabel: { fontSize: 13, color: Colors.textSecondary },
+  costRowVal: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  chatFab: { position: 'absolute', bottom: 24, right: 20, backgroundColor: Colors.primary, borderRadius: 28, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 4 },
+  chatFabText: { color: Colors.white, fontWeight: '700', fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  chatSheetContainer: { height: '70%', backgroundColor: Colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: Colors.primary },
+  sheetSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  chatMessagesScroll: { flex: 1 },
+  msgBubble: { padding: 12, borderRadius: 14, marginBottom: 10, maxWidth: '80%' },
+  userMsg: { alignSelf: 'flex-end', backgroundColor: Colors.primary },
+  aiMsg: { alignSelf: 'flex-start', backgroundColor: Colors.tabBackground },
+  systemMsg: { alignSelf: 'center', backgroundColor: Colors.cardGreen, paddingVertical: 6, paddingHorizontal: 14 },
+  msgText: { fontSize: 13, lineHeight: 18 },
+  inputBar: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: Colors.border, gap: 8 },
+  chatInput: { flex: 1, backgroundColor: Colors.background, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 13 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
+
+  // Rating Modal Styles
+  ratingSheetContainer: { height: '85%', backgroundColor: Colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  aspectBox: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' },
+  aspectHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  aspectTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  aspectWeight: { fontSize: 11, fontWeight: '800', color: Colors.accent },
+  aspectDesc: { fontSize: 11, color: '#64748B', lineHeight: 16, marginBottom: 10 },
+  starsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  starBtn: { padding: 2 },
+  starLabel: { fontSize: 13, fontWeight: '800', color: '#0F172A', marginLeft: 8 },
+  fieldHeading: { fontSize: 12, fontWeight: '700', color: Colors.primary, marginBottom: 6 },
+  reviewInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#0F172A', height: 70, textAlignVertical: 'top', marginBottom: 20 },
+  submitRatingBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 40 },
+  submitRatingBtnText: { color: Colors.white, fontSize: 14, fontWeight: '700' },
 });

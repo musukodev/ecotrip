@@ -1,19 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors, spacing, font } from '@/constants/theme';
+import { View, Text, TouchableOpacity, StyleSheet, TextStyle, ViewStyle } from 'react-native';
+import { Colors, spacing } from '@/constants/theme';
 
 interface SectionHeaderProps {
   title: string;
-  onPressViewAll?: () => void;
+  onViewAll?: () => void;
   showViewAll?: boolean;
 }
 
-export default function SectionHeader({ title, onPressViewAll, showViewAll = true }: SectionHeaderProps) {
+export default function SectionHeader({ title, onViewAll, showViewAll = true }: SectionHeaderProps) {
   return (
-    <View style={styles.row}>
+    <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       {showViewAll && (
-        <TouchableOpacity onPress={onPressViewAll}>
+        <TouchableOpacity onPress={onViewAll} activeOpacity={0.7}>
           <Text style={styles.viewAll}>View all</Text>
         </TouchableOpacity>
       )}
@@ -22,20 +22,24 @@ export default function SectionHeader({ title, onPressViewAll, showViewAll = tru
 }
 
 const styles = StyleSheet.create({
-  row: {
+  container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
-  },
+  } as ViewStyle,
   title: {
-    ...font.eyebrow,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  } as TextStyle,
   viewAll: {
-    ...font.eyebrow,
-    color: Colors.greenLight,
-  },
+    color: Colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  } as TextStyle,
 });

@@ -1,3 +1,5 @@
+import { TextStyle } from 'react-native';
+
 export const Colors = {
   primary: '#0D2B22',
   primaryDark: '#071D17',
@@ -44,7 +46,7 @@ export const radius = {
   pill: 999,
 };
 
-export const font = {
+export const font: Record<string, TextStyle> = {
   eyebrow: {
     fontSize: 11,
     fontWeight: '700',

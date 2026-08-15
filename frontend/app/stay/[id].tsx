@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,176 +7,168 @@ import {
   TouchableOpacity,
   ImageBackground,
   Dimensions,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { accommodationService, Accommodation } from '@/services/accommodationService';
 
 const { width } = Dimensions.get('window');
-
-// Data Dummy Front-end
-const DUMMY_STAYS: Record<string, any> = {
-  'nirwana-eco-resort': {
-    title: 'Nirwana Eco Resort',
-    location: 'Bali, Indonesia',
-    rating: '4.9',
-    tags: ['Sustainable Certified', 'Luxury'],
-    about:
-      'Experience unparalleled luxury in harmony with nature. Nirwana Eco Resort is a pioneering sanctuary fully powered by solar energy, offering organic farm-to-table dining and exclusive reef restoration tours, proving that premium comfort doesn\'t have to cost the earth.',
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000',
-    amenities: [
-      { name: 'Fast Wi-Fi', icon: 'wifi-outline' },
-      { name: 'Infinity Pool', icon: 'water-outline' },
-      { name: 'Eco Spa', icon: 'leaf-outline' },
-      { name: 'Organic Dining', icon: 'restaurant-outline' },
-    ],
-    ecoImpacts: [
-      {
-        title: '100% Solar Powered',
-        desc: 'The entire resort operates on renewable energy, significantly reducing its carbon footprint while providing uninterrupted luxury.',
-        icon: 'flash-outline',
-      },
-      {
-        title: 'Reef Protection',
-        desc: 'A portion of every booking goes towards local coral reef restoration programs, ensuring marine biodiversity for future generations.',
-        icon: 'water-outline',
-      },
-    ],
-  },
-  'batam-green-villa': {
-    title: 'Batam Green Villa',
-    location: 'Batam, Indonesia',
-    rating: '4.9',
-    tags: ['Eco-Badge', 'Forest View'],
-    about:
-      'Sustainable forest retreat featuring expansive organic gardens, rainwater harvesting, and zero-waste initiatives nestled deep within Batam\'s lush nature.',
-    image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000',
-    amenities: [
-      { name: 'Fast Wi-Fi', icon: 'wifi-outline' },
-      { name: 'Nature Walk', icon: 'walk-outline' },
-      { name: 'Eco Kitchen', icon: 'restaurant-outline' },
-    ],
-    ecoImpacts: [
-      {
-        title: 'Rainwater Harvesting',
-        desc: '100% of water used for gardens and secondary needs is collected through sustainable rainwater systems.',
-        icon: 'rainy-outline',
-      },
-    ],
-  },
-};
 
 export default function StayDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Memilih data berdasarkan ID, fallback ke Nirwana jika ID tidak ditemukan
-  const stay = DUMMY_STAYS[id || ''] || DUMMY_STAYS['nirwana-eco-resort'];
+  const [accommodation, setAccommodation] = useState<Accommodation | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        const res = await accommodationService.getAccommodationById(id);
+        setAccommodation(res);
+        setIsFavorite(res.is_favorite || false);
+      } catch (e) {
+        console.error('Failed to load stay detail', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
+
+  const handleToggleFavorite = async () => {
+    if (!id) return;
+    try {
+      const res = await accommodationService.toggleFavorite(id);
+      setIsFavorite(res.is_favorite);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCall = () => {
+    if (accommodation?.phone) {
+      Linking.openURL(`tel:${accommodation.phone}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" color="#0B3C26" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!accommodation) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={styles.errorText}>Penginapan tidak ditemukan.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>Kembali</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Top Image Banner */}
-        <ImageBackground source={{ uri: stay.image }} style={styles.bannerImage}>
-          <SafeAreaView style={styles.headerBar}>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={20} color="#0F172A" />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Top Image Banner with Floating Header */}
+        <ImageBackground
+          source={{
+            uri: accommodation.photos?.[0] || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000',
+          }}
+          style={styles.bannerImage}
+        >
+          <SafeAreaView style={styles.topHeaderBar} edges={['top']}>
+            <TouchableOpacity style={styles.circleBtn} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={20} color="#000" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="heart" size={20} color="#DC2626" />
+            <TouchableOpacity style={styles.circleBtn} onPress={handleToggleFavorite}>
+              <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={20} color={isFavorite ? '#E63946' : '#000'} />
             </TouchableOpacity>
           </SafeAreaView>
         </ImageBackground>
 
-        {/* Floating Content Body */}
-        <View style={styles.contentContainer}>
-          {/* Title & Rating */}
-          <View style={styles.titleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{stay.title}</Text>
-              <View style={styles.locRow}>
-                <Ionicons name="location-outline" size={14} color="#64748B" />
-                <Text style={styles.locText}>{stay.location}</Text>
-              </View>
+        {/* Content Sheet */}
+        <View style={styles.contentSheet}>
+          {/* Badge & Rating Row */}
+          <View style={styles.metaRow}>
+            <View style={styles.ecoBadge}>
+              <Ionicons name="leaf-outline" size={12} color="#0B3C26" />
+              <Text style={styles.ecoBadgeText}>
+                Eco Score {accommodation.eco_score ? accommodation.eco_score.toFixed(1) : '90.0'}
+              </Text>
             </View>
-
-            <View style={styles.ratingBadge}>
-              <Ionicons name="star-outline" size={14} color="#0B3C26" />
-              <Text style={styles.ratingText}>{stay.rating}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{accommodation.category.toUpperCase()}</Text>
             </View>
           </View>
 
-          {/* Badges / Tags */}
-          <View style={styles.tagRow}>
-            {stay.tags.map((tag: string, index: number) => (
-              <View key={index} style={index === 0 ? styles.tagGreen : styles.tagGold}>
-                <Ionicons
-                  name={index === 0 ? 'leaf-outline' : 'diamond-outline'}
-                  size={12}
-                  color={index === 0 ? '#0B3C26' : '#92400E'}
-                />
-                <Text style={index === 0 ? styles.tagGreenText : styles.tagGoldText}>{tag}</Text>
-              </View>
-            ))}
+          {/* Title & Location */}
+          <Text style={styles.title}>{accommodation.name}</Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color="#64748B" />
+            <Text style={styles.locationText}>{accommodation.location}</Text>
+          </View>
+
+          {/* Price Box */}
+          <View style={styles.priceBox}>
+            <Text style={styles.priceLabel}>Harga per malam mulai dari</Text>
+            <Text style={styles.priceValue}>
+              Rp {accommodation.price_per_night.toLocaleString('id-ID')}
+            </Text>
           </View>
 
           {/* About Section */}
-          <Text style={styles.sectionTitle}>About this stay</Text>
-          <Text style={styles.aboutText}>{stay.about}</Text>
-          <TouchableOpacity style={{ marginTop: 4 }}>
-            <Text style={styles.readMore}>Read more</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Tentang Penginapan</Text>
+          <Text style={styles.aboutText}>{accommodation.description}</Text>
 
-          {/* Amenities Section */}
-          <Text style={styles.sectionTitle}>Amenities</Text>
-          <View style={styles.amenitiesGrid}>
-            {stay.amenities.map((amenity: any, index: number) => (
-              <View key={index} style={styles.amenityItem}>
-                <View style={styles.amenityIconCircle}>
-                  <Ionicons name={amenity.icon} size={20} color="#0B3C26" />
-                </View>
-                <Text style={styles.amenityLabel}>{amenity.name}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Eco Impact Section */}
-          <Text style={styles.sectionTitle}>Eco Impact</Text>
-          <View style={styles.ecoCardWrapper}>
-            {stay.ecoImpacts.map((impact: any, idx: number) => (
-              <View key={idx} style={[styles.impactBox, idx > 0 && { marginTop: 14 }]}>
+          {/* Environmental Impact Section */}
+          {accommodation.environmental_impact && (
+            <>
+              <Text style={styles.sectionTitle}>Inisiatif Ramah Lingkungan</Text>
+              <View style={styles.impactCard}>
                 <View style={styles.impactIconCircle}>
-                  <Ionicons name={impact.icon} size={18} color="#0B3C26" />
+                  <Ionicons name="flash-outline" size={16} color="#FFFFFF" />
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.impactTitle}>{impact.title}</Text>
-                  <Text style={styles.impactDesc}>{impact.desc}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.impactTitle}>Praktik Keberlanjutan</Text>
+                  <Text style={styles.impactDesc}>{accommodation.environmental_impact}</Text>
                 </View>
               </View>
-            ))}
-          </View>
+            </>
+          )}
 
-          {/* Location / Map Section */}
-          <Text style={styles.sectionTitle}>Location</Text>
-          <View style={styles.mapCard}>
-            <ImageBackground
-              source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000' }}
-              style={styles.mapImage}
-            >
-              <View style={styles.mapPin}>
-                <Ionicons name="location" size={20} color="#0B3C26" />
+          {/* Amenities Grid */}
+          {accommodation.facilities && accommodation.facilities.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Fasilitas</Text>
+              <View style={styles.amenitiesGrid}>
+                {accommodation.facilities.map((am, idx) => (
+                  <View key={idx} style={styles.amenityCard}>
+                    <Ionicons name="checkmark-circle" size={16} color="#0B3C26" />
+                    <Text style={styles.amenityName}>{am}</Text>
+                  </View>
+                ))}
               </View>
-            </ImageBackground>
-            <View style={styles.mapFooter}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.mapTitle}>{stay.title}</Text>
-                <Text style={styles.mapSubtitle}>{stay.location}</Text>
-              </View>
-              <TouchableOpacity style={styles.bookBtn}>
-                <Text style={styles.bookBtnText}>Book Now</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            </>
+          )}
+
+          {/* Contact button */}
+          {accommodation.phone && (
+            <TouchableOpacity style={styles.contactBtn} onPress={handleCall}>
+              <Ionicons name="call-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.contactBtnText}>Hubungi Penginapan ({accommodation.phone})</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -184,114 +176,109 @@ export default function StayDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EFF6F3' },
-  bannerImage: { width: width, height: 260 },
-  headerBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10 },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  scrollContent: { paddingBottom: 40 },
+  errorText: { color: '#64748B', fontSize: 15, marginBottom: 12 },
+  backBtn: { backgroundColor: '#0B3C26', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  backBtnText: { color: '#FFFFFF', fontWeight: 'bold' },
+  bannerImage: { width: width, height: 300, position: 'relative' },
+  topHeaderBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#EFF6F3',
-    marginTop: -24,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  contentSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -30,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
   },
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
-  locRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  locText: { fontSize: 13, color: '#64748B', marginLeft: 4 },
-  ratingBadge: {
+  metaRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  ecoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E2EFE9',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  ratingText: { fontSize: 13, fontWeight: '700', color: '#0B3C26', marginLeft: 4 },
-  tagRow: { flexDirection: 'row', marginVertical: 14 },
-  tagGreen: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#D1E7DD',
-    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    marginRight: 8,
+    gap: 4,
   },
-  tagGreenText: { fontSize: 11, fontWeight: '700', color: '#0B3C26', marginLeft: 4 },
-  tagGold: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+  ecoBadgeText: { fontSize: 11, fontWeight: '700', color: '#0B3C26' },
+  categoryBadge: {
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  tagGoldText: { fontSize: 11, fontWeight: '700', color: '#92400E', marginLeft: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginTop: 20, marginBottom: 10 },
-  aboutText: { fontSize: 13, color: '#475569', lineHeight: 20 },
-  readMore: { fontSize: 13, fontWeight: '700', color: '#0B3C26' },
-  amenitiesGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  amenityItem: { alignItems: 'center', flex: 1 },
-  amenityIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#E2EFE9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  amenityLabel: { fontSize: 11, color: '#475569', textAlign: 'center' },
-  ecoCardWrapper: {
-    backgroundColor: '#EBF4F0',
-    borderRadius: 16,
+  categoryBadgeText: { fontSize: 11, fontWeight: '700', color: '#475569' },
+  title: { fontSize: 22, fontWeight: '800', color: '#1E293B', marginBottom: 6 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 20 },
+  locationText: { fontSize: 13, color: '#64748B' },
+  priceBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#D0E3DC',
+    borderColor: '#E2E8F0',
+    marginBottom: 24,
   },
-  impactBox: { flexDirection: 'row', alignItems: 'flex-start' },
+  priceLabel: { fontSize: 12, color: '#64748B', marginBottom: 4 },
+  priceValue: { fontSize: 20, fontWeight: '800', color: '#0B3C26' },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0B3C26', marginTop: 10, marginBottom: 12 },
+  aboutText: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 16 },
+  impactCard: {
+    flexDirection: 'row',
+    backgroundColor: '#EFF6F3',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
   impactIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#D1E7DD',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#0B3C26',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  impactTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  impactDesc: { fontSize: 12, color: '#64748B', marginTop: 2, lineHeight: 16 },
-  mapCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
+  impactTitle: { fontSize: 13, fontWeight: '800', color: '#0B3C26' },
+  impactDesc: { fontSize: 12, color: '#2D6A4F', marginTop: 2, lineHeight: 16 },
+  amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  amenityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
   },
-  mapImage: { height: 120, justifyContent: 'center', alignItems: 'center' },
-  mapPin: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FFFFFF',
+  amenityName: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  contactBtn: {
+    backgroundColor: '#0B3C26',
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    marginTop: 10,
   },
-  mapFooter: { flexDirection: 'row', padding: 12, alignItems: 'center' },
-  mapTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  mapSubtitle: { fontSize: 11, color: '#64748B' },
-  bookBtn: { backgroundColor: '#0B3C26', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  bookBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  contactBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

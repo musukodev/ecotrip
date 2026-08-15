@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoTour AI — Prototipe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12312B;
+  --ink-soft:#2A473F;
+  --paper:#EEF3ED;
+  --surface:#FFFFFF;
+  --sea:#2C6B85;
+  --sea-deep:#123244;
+  --sunrise:#E7A83B;
+  --sunrise-deep:#C98A22;
+  --leaf:#4C8B5A;
+  --leaf-soft:#DCEBDF;
+  --berry:#C7455A;
+  --berry-soft:#F7DEE1;
+  --line:#D9E1D6;
+  --muted:#66766D;
+  --radius-lg:26px;
+  --radius-md:16px;
+  --radius-sm:10px;
+  --shadow-card: 0 1px 2px rgba(18,49,43,0.06), 0 8px 20px -12px rgba(18,49,43,0.18);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #E7F0E4 0%, transparent 60%),
+    radial-gradient(1000px 500px at 90% 10%, #E3EEF2 0%, transparent 55%),
+    #DCE6DE;
+  font-family:'Plus Jakarta Sans', sans-serif;
+  color:var(--ink);
+  min-height:100vh;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:36px 16px 60px;
+}
+.mono{font-family:'IBM Plex Mono', monospace;}
+.display{font-family:'Fraunces', serif;}
+
+/* ---------- Prototype chrome (outside the phone) ---------- */
+.stage{display:flex; flex-direction:column; align-items:center; gap:14px;}
+.stage-head{display:flex; align-items:center; gap:10px; color:var(--ink-soft); font-size:13px;}
+.stage-head .dot{width:7px;height:7px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 4px var(--leaf-soft);}
+.jumpbar{display:flex; gap:6px; flex-wrap:wrap; max-width:420px; justify-content:center; margin-top:2px;}
+.jumpbar button{
+  border:1px solid var(--line); background:rgba(255,255,255,0.7); color:var(--ink-soft);
+  font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; padding:5px 9px; border-radius:20px; cursor:pointer;
+}
+.jumpbar button.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+
+/* ---------- Phone frame ---------- */
+.phone{
+  width:390px; height:844px; background:var(--ink);
+  border-radius:52px; padding:14px; box-shadow:0 30px 60px -20px rgba(18,49,43,0.45), 0 2px 0 rgba(255,255,255,0.4) inset;
+  position:relative;
+}
+.notch{
+  position:absolute; top:14px; left:50%; transform:translateX(-50%);
+  width:120px; height:26px; background:var(--ink); border-radius:0 0 16px 16px; z-index:40;
+}
+.screen-shell{
+  width:100%; height:100%; background:var(--paper); border-radius:38px; overflow:hidden; position:relative;
+}
+.statusbar{
+  display:flex; justify-content:space-between; align-items:center; padding:14px 26px 4px; font-size:12px; font-weight:600; color:var(--ink);
+}
+.screen-area{position:relative; height:calc(100% - 30px); overflow:hidden;}
+.screen{
+  position:absolute; inset:0; display:none; flex-direction:column; overflow-y:auto; padding-bottom:12px;
+  scrollbar-width:none;
+}
+.screen::-webkit-scrollbar{display:none;}
+.screen.active{display:flex;}
+
+/* ---------- shared bits ---------- */
+.topbar{display:flex; align-items:center; justify-content:space-between; padding:6px 20px 12px;}
+.topbar h1{font-family:'Fraunces',serif; font-size:20px; font-weight:600; margin:0; letter-spacing:-0.01em;}
+.iconbtn{
+  width:36px;height:36px;border-radius:50%; background:var(--surface); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); position:relative;
+}
+.iconbtn svg{width:17px;height:17px;}
+.badge-dot{position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:var(--berry); border:2px solid var(--paper);}
+
+.section-pad{padding:0 20px;}
+.card{
+  background:var(--surface); border-radius:var(--radius-md); padding:16px; box-shadow:var(--shadow-card);
+  border:1px solid rgba(18,49,43,0.05);
+}
+.muted{color:var(--muted); font-size:12.5px; line-height:1.5;}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--sea);
+  font-weight:600;
+}
+.btn{
+  border:none; border-radius:14px; padding:13px 18px; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:14px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-primary{background:var(--ink); color:#fff;}
+.btn-primary:active{background:var(--ink-soft);}
+.btn-sunrise{background:var(--sunrise); color:#3A2A08;}
+.btn-outline{background:transparent; border:1.5px solid var(--ink); color:var(--ink);}
+.btn-ghost{background:var(--surface); border:1px solid var(--line); color:var(--ink);}
+.btn-block{width:100%;}
+.btn-sm{padding:8px 12px; font-size:12.5px; border-radius:10px;}
+.btn-danger-outline{background:transparent; border:1.5px solid var(--berry); color:var(--berry);}
+
+.chip{
+  border:1px solid var(--line); background:var(--surface); border-radius:20px; padding:8px 13px; font-size:12.5px;
+  font-weight:600; color:var(--ink-soft); cursor:pointer; white-space:nowrap;
+}
+.chip.selected{background:var(--ink); color:#fff; border-color:var(--ink);}
+.chiprow{display:flex; gap:8px; flex-wrap:wrap;}
+.chiprow.scroll{flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px;}
+
+.tag{font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:4px;}
+.tag-leaf{background:var(--leaf-soft); color:var(--leaf);}
+.tag-sea{background:#DCEAF0; color:var(--sea);}
+.tag-sunrise{background:#FBEACB; color:var(--sunrise-deep);}
+.tag-berry{background:var(--berry-soft); color:var(--berry);}
+
+.segmented{display:flex; background:#E4EAE2; border-radius:14px; padding:4px; gap:4px;}
+.segmented button{
+  flex:1; border:none; background:transparent; padding:9px 6px; border-radius:11px; font-weight:700; font-size:12.5px;
+  color:var(--ink-soft); font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer;
+}
+.segmented button.active{background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(18,49,43,0.15);}
+
+.divider{height:1px; background:var(--line); margin:14px 0;}
+
+hr.hair{border:none; border-top:1px solid var(--line); margin:0;}
+
+/* bottom nav */
+.bottom-nav{
+  position:absolute; left:0; right:0; bottom:0; background:rgba(255,255,255,0.92); backdrop-filter:blur(6px);
+  border-top:1px solid var(--line); display:flex; padding:8px 6px 14px; z-index:30;
+}
+.nav-item{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted); font-size:10.5px; font-weight:700; cursor:pointer;}
+.nav-item svg{width:20px;height:20px;}
+.nav-item.active{color:var(--ink);}
+.nav-item.active svg{color:var(--leaf);}
+
+/* fab */
+.fab{
+  position:absolute; right:18px; bottom:88px; width:56px; height:56px; border-radius:50%;
+  background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -6px rgba(18,49,43,0.5);
+  cursor:pointer; z-index:25; border:none;
+}
+.fab svg{width:24px;height:24px;}
+
+/* ---------- Onboarding ---------- */
+#s-onboard{padding:0;}
+.ob-slide{display:none; flex-direction:column; height:100%; padding:30px 26px 26px;}
+.ob-slide.active{display:flex;}
+.ob-art{
+  height:270px; border-radius:24px; margin-bottom:26px; position:relative; overflow:hidden;
+  background:linear-gradient(160deg, var(--sea-deep), var(--sea) 60%, var(--leaf));
+}
+.ob-dots{display:flex; gap:6px; margin:6px 0 18px;}
+.ob-dots span{width:6px;height:6px;border-radius:50%;background:var(--line);}
+.ob-dots span.active{width:20px; border-radius:6px; background:var(--ink);}
+.ob-nav{display:flex; align-items:center; justify-content:space-between; margin-top:auto;}
+.skiplink{background:none;border:none;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+
+/* tide wave svg reused */
+.tide-wave{position:absolute; bottom:0; left:0; width:100%; opacity:0.5;}
+
+/* ---------- Auth ---------- */
+.authwrap{padding:34px 26px 20px;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:6px;}
+.field input, .field textarea{
+  width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 13px; font-size:14px;
+  font-family:'Plus Jakarta Sans',sans-serif; background:var(--surface); color:var(--ink);
+}
+.field input:focus, .field textarea:focus{outline:2px solid var(--leaf); outline-offset:1px; border-color:var(--leaf);}
+.google-btn{
+  display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:12px; border-radius:12px;
+  border:1.5px solid var(--line); background:#fff; font-weight:700; font-size:13.5px; color:var(--ink); cursor:pointer;
+}
+.orline{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:11.5px; margin:16px 0;}
+.orline::before, .orline::after{content:""; flex:1; height:1px; background:var(--line);}
+
+/* ---------- tide gauge (signature score element) ---------- */
+.tide-gauge{position:relative; width:104px; height:104px; flex-shrink:0;}
+.tide-gauge svg{width:100%; height:100%; display:block;}
+.tide-gauge .tg-num{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.tide-gauge .tg-num b{font-family:'Fraunces',serif; font-size:26px; font-weight:600; line-height:1;}
+.tide-gauge .tg-num span{font-size:9px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;}
+
+/* ---------- Home ---------- */
+.hero-card{
+  margin:0 20px 16px; border-radius:22px; padding:20px; color:#fff; position:relative; overflow:hidden;
+  background:linear-gradient(150deg, var(--sea-deep) 0%, var(--sea) 55%, #1F6B4F 100%);
+}
+.hero-card .eyebrow{color:#BFE3D6;}
+.reco-scroll{display:flex; gap:12px; overflow-x:auto; padding:2px 20px 6px;}
+.reco-card{min-width:158px; border-radius:16px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow-card); flex-shrink:0;}
+.reco-img{height:88px; background:linear-gradient(135deg,var(--leaf),var(--sea));}
+.reco-body{padding:10px 11px 12px;}
+.reco-body h4{margin:0 0 4px; font-size:13px; font-family:'Fraunces',serif; font-weight:600;}
+
+.trip-preview{margin:0 20px 18px; border-radius:18px; padding:14px; display:flex; gap:12px; align-items:center; background:var(--surface); box-shadow:var(--shadow-card); cursor:pointer;}
+.trip-preview .thumb{width:56px;height:56px;border-radius:12px; background:linear-gradient(135deg,var(--sunrise),var(--berry)); flex-shrink:0;}
+
+/* ---------- Planner ---------- */
+.stepper{display:flex; align-items:center; gap:14px;}
+.stepper button{width:34px;height:34px;border-radius:50%; border:1.5px solid var(--line); background:#fff; font-size:17px; font-weight:700; cursor:pointer; color:var(--ink);}
+.stepper .val{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; min-width:40px; text-align:center;}
+input[type=range]{width:100%; accent-color:var(--leaf);}
+
+/* ---------- Itinerary ---------- */
+.tide-track{position:relative; margin:4px 0 18px;}
+.tide-track svg{width:100%; height:56px; display:block;}
+.day-pills{display:flex; justify-content:space-between; padding:0 6px; margin-top:-40px; position:relative;}
+.day-pill{
+  width:56px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+}
+.day-pill .dp-circle{
+  width:34px;height:34px;border-radius:50%; background:#fff; border:2px solid var(--line); display:flex; align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:var(--ink-soft);
+}
+.day-pill.active .dp-circle{background:var(--ink); border-color:var(--ink); color:#fff;}
+.day-pill span.dlabel{font-size:9.5px; font-weight:700; color:var(--muted);}
+.day-pill.active span.dlabel{color:var(--ink);}
+
+.env-row{display:flex; gap:10px; margin:0 0 16px;}
+.env-chip{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:10px 12px; display:flex; align-items:center; gap:9px;}
+.env-chip svg{width:20px;height:20px; color:var(--sea); flex-shrink:0;}
+.env-chip b{display:block; font-size:13px; font-family:'IBM Plex Mono',monospace;}
+.env-chip small{color:var(--muted); font-size:10px;}
+
+.activity{display:flex; gap:12px; margin-bottom:14px;}
+.activity .time{width:46px; flex-shrink:0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; color:var(--muted); padding-top:14px;}
+.activity .line-wrap{display:flex; flex-direction:column; align-items:center; width:14px; flex-shrink:0;}
+.activity .dot-node{width:10px;height:10px; border-radius:50%; background:var(--leaf); margin-top:16px;}
+.activity .line-node{flex:1; width:2px; background:var(--line); margin-top:2px;}
+.activity .abody{flex:1; background:var(--surface); border-radius:14px; padding:12px 13px; box-shadow:var(--shadow-card);}
+.activity h4{margin:0 0 4px; font-size:14px; font-family:'Fraunces',serif; font-weight:600;}
+.activity-foot{display:flex; align-items:center; justify-content:space-between; margin-top:8px;}
+
+.map-illustration{margin:0 20px 16px; border-radius:18px; overflow:hidden; box-shadow:var(--shadow-card); position:relative;}
+.map-illustration svg{width:100%; display:block;}
+.pin-label{position:absolute; background:var(--ink); color:#fff; font-size:9.5px; font-weight:700; padding:3px 7px; border-radius:6px;}
+
+.cost-bar-wrap{background:var(--surface); border-radius:14px; padding:14px; box-shadow:var(--shadow-card); margin-bottom:14px;}
+.cost-bar-track{height:10px; border-radius:6px; background:var(--line); overflow:hidden; margin:8px 0 4px;}
+.cost-bar-fill{height:100%; background:linear-gradient(90deg, var(--leaf), var(--sea));}
+.cost-line{display:flex; justify-content:space-between; padding:9px 0; font-size:13px;}
+
+/* chat drawer */
+.overlay{position:absolute; inset:0; background:rgba(18,49,43,0.35); z-index:50; display:none;}
+.overlay.active{display:block;}
+.sheet{
+  position:absolute; left:0; right:0; bottom:0; background:var(--paper); border-radius:26px 26px 0 0; z-index:60;
+  max-height:86%; display:flex; flex-direction:column; transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 -10px 30px rgba(18,49,43,0.25);
+}
+.sheet.open{transform:translateY(0);}
+.sheet-handle{width:38px;height:4px;background:var(--line); border-radius:4px; margin:10px auto 4px;}
+.sheet-head{display:flex; align-items:center; justify-content:space-between; padding:8px 18px 12px;}
+.chat-body{flex:1; overflow-y:auto; padding:6px 16px;}
+.msg{max-width:80%; padding:10px 13px; border-radius:16px; font-size:13px; line-height:1.45; margin-bottom:10px;}
+.msg.ai{background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px;}
+.msg.user{background:var(--ink); color:#fff; margin-left:auto; border-bottom-right-radius:4px;}
+.msg.system{background:var(--leaf-soft); color:var(--leaf); font-weight:700; font-size:11.5px; text-align:center; margin:8px auto; border-radius:10px; max-width:90%;}
+.chat-input-row{display:flex; gap:8px; padding:10px 14px 16px; border-top:1px solid var(--line);}
+.chat-input-row input{flex:1; border:1.5px solid var(--line); border-radius:20px; padding:10px 15px; font-size:13px; font-family:'Plus Jakarta Sans',sans-serif;}
+.sendbtn{width:38px;height:38px;border-radius:50%; background:var(--ink); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+.quickreplies{display:flex; gap:7px; overflow-x:auto; padding:4px 16px 10px;}
+
+/* eco / recs */
+.rec-item{display:flex; gap:12px; background:var(--surface); border-radius:14px; padding:11px; box-shadow:var(--shadow-card); margin-bottom:12px;}
+.rec-item .thumb{width:64px;height:64px;border-radius:10px; flex-shrink:0; background:linear-gradient(135deg,var(--leaf),#8FC79C);}
+.rec-item h4{margin:0 0 3px; font-size:13.5px; font-family:'Fraunces',serif; font-weight:600;}
+
+.donut-wrap{display:flex; align-items:center; gap:16px;}
+.legend-row{display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:8px;}
+.legend-dot{width:9px;height:9px;border-radius:50%; flex-shrink:0;}
+
+/* badge submit */
+.upload-box{
+  border:1.5px dashed var(--line); border-radius:14px; padding:26px 14px; text-align:center; color:var(--muted); font-size:12.5px; background:var(--surface);
+}
+.status-item{display:flex; gap:12px; background:var(--surface); border-radius:14px; padding:13px; box-shadow:var(--shadow-card); margin-bottom:12px;}
+.status-item .thumb{width:48px;height:48px;border-radius:10px; background:linear-gradient(135deg,var(--sunrise),#F0CB85); flex-shrink:0;}
+.pill-status{font-size:10px; font-weight:800; padding:3px 9px; border-radius:20px;}
+.pill-wait{background:#FBEACB; color:var(--sunrise-deep);}
+.pill-ok{background:var(--leaf-soft); color:var(--leaf);}
+.pill-no{background:var(--berry-soft); color:var(--berry);}
+
+/* notifications */
+.notif-item{display:flex; gap:12px; padding:13px 20px; border-bottom:1px solid var(--line);}
+.notif-icon{width:36px;height:36px;border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.notif-icon svg{width:17px;height:17px;}
+
+/* profile */
+.profile-head{display:flex; align-items:center; gap:14px; padding:6px 20px 18px;}
+.avatar{width:58px;height:58px;border-radius:50%; background:linear-gradient(135deg,var(--sea),var(--leaf)); display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+.menu-row{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--line); cursor:pointer;}
+.menu-row .mr-left{display:flex; align-items:center; gap:12px;}
+.menu-row svg{width:18px;height:18px; color:var(--ink-soft);}
+.menu-row .mr-label{font-size:13.5px; font-weight:600;}
+.toggle{width:42px;height:24px;border-radius:20px; background:var(--line); position:relative; cursor:pointer; flex-shrink:0;}
+.toggle.on{background:var(--leaf);}
+.toggle .knob{position:absolute; top:2px; left:2px; width:20px;height:20px;border-radius:50%; background:#fff; transition:left .18s;}
+.toggle.on .knob{left:20px;}
+
+/* admin */
+.admin-card{display:flex; gap:12px; background:var(--surface); border-radius:14px; padding:12px; box-shadow:var(--shadow-card); margin-bottom:12px; cursor:pointer;}
+.admin-card .thumb{width:54px;height:54px;border-radius:10px; background:linear-gradient(135deg,#C9DCC9,var(--leaf)); flex-shrink:0;}
+
+/* toast */
+.toast{
+  position:absolute; left:50%; bottom:100px; transform:translateX(-50%) translateY(10px); background:var(--ink); color:#fff;
+  padding:11px 18px; border-radius:30px; font-size:12.5px; font-weight:600; z-index:80; opacity:0; pointer-events:none; transition:all .25s;
+  display:flex; align-items:center; gap:8px; white-space:nowrap;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+.hidden{display:none !important;}
+
+@media (max-width:420px){
+  .phone{width:100%; max-width:390px; height:88vh; min-height:640px;}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="stage-head"><span class="dot"></span> EcoTour AI — Prototipe interaktif (klik untuk navigasi)</div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen-shell">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="mono" style="font-size:11px; letter-spacing:1px;">●●●● 5G ▮▮▮</span>
+      </div>
+      <div class="screen-area" id="screen-area">
+
+        <!-- ================= ONBOARDING ================= -->
+        <div class="screen active" id="s-onboard">
+          <div class="ob-slide active" data-slide="0">
+            <div class="ob-art">
+              <svg class="tide-wave" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0,60 C60,90 120,30 200,55 C280,80 340,30 400,50 L400,100 L0,100 Z" fill="rgba(255,255,255,0.18)"/></svg>
+              <svg class="tide-wave" viewBox="0 0 400 100" preserveAspectRatio="none" style="opacity:0.9"><path d="M0,75 C70,50 130,90 210,68 C290,46 340,85 400,65 L400,100 L0,100 Z" fill="rgba(238,243,237,0.95)"/></svg>
+            </div>
+            <span class="eyebrow">01 · Rencanakan</span>
+            <h2 class="display" style="font-size:23px; margin:8px 0 8px;">Itinerary AI untuk Batam & Singapura</h2>
+            <p class="muted">Cukup ceritakan preferensimu — Gemini menyusun rencana perjalanan lintas selat yang ramah lingkungan dalam hitungan detik.</p>
+            <div class="ob-dots"><span class="active"></span><span></span><span></span></div>
+            <div class="ob-nav">
+              <button class="skiplink" onclick="showScreen('s-auth')">Lewati</button>
+              <button class="btn btn-primary" onclick="obGo(1)">Lanjut →</button>
+            </div>
+          </div>
+          <div class="ob-slide" data-slide="1">
+            <div class="ob-art" style="background:linear-gradient(160deg,#1F6B4F,var(--leaf) 60%,var(--sunrise));"></div>
+            <span class="eyebrow">02 · Pantau</span>
+            <h2 class="display" style="font-size:23px; margin:8px 0 8px;">Jejak karbon & skor keberlanjutan</h2>
+            <p class="muted">Lihat estimasi emisi setiap perjalanan seperti membaca pasang-surut — dan tebus jejakmu lewat carbon offset.</p>
+            <div class="ob-dots"><span></span><span class="active"></span><span></span></div>
+            <div class="ob-nav">
+              <button class="skiplink" onclick="showScreen('s-auth')">Lewati</button>
+              <button class="btn btn-primary" onclick="obGo(2)">Lanjut →</button>
+            </div>
+          </div>
+          <div class="ob-slide" data-slide="2">
+            <div class="ob-art" style="background:linear-gradient(160deg,var(--sea-deep),var(--sunrise-deep) 70%,var(--sunrise));"></div>
+            <span class="eyebrow">03 · Temukan</span>
+            <h2 class="display" style="font-size:23px; margin:8px 0 8px;">Destinasi & UMKM eco-friendly</h2>
+            <p class="muted">Dari transportasi rendah emisi sampai kuliner lokal bersertifikat hijau, semua tertandai lencana eco.</p>
+            <div class="ob-dots"><span></span><span></span><span class="active"></span></div>
+            <div class="ob-nav">
+              <span></span>
+              <button class="btn btn-sunrise" onclick="showScreen('s-auth')">Mulai ✨</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= AUTH ================= -->
+        <div class="screen" id="s-auth">
+          <div class="authwrap">
+            <span class="eyebrow">EcoTour AI</span>
+            <h2 class="display" style="font-size:25px; margin:6px 0 20px;">Selamat datang kembali</h2>
+            <div class="segmented" style="margin-bottom:20px;">
+              <button class="active" onclick="authTab(this,'login')">Masuk</button>
+              <button onclick="authTab(this,'register')">Daftar</button>
+            </div>
+
+            <div id="auth-login">
+              <div class="field"><label>Email</label><input type="email" placeholder="nama@email.com"></div>
+              <div class="field">
+                <label>Kata Sandi</label>
+                <input type="password" placeholder="••••••••">
+                <div style="text-align:right; margin-top:6px;">
+                  <a href="#" onclick="event.preventDefault(); toast('Tautan reset kata sandi dikirim ke email')" style="font-size:11.5px; color:var(--sea); font-weight:700; text-decoration:none;">Lupa kata sandi?</a>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="doLogin()">Masuk</button>
+              <div class="orline">atau</div>
+              <button class="google-btn" onclick="doLogin()">
+                <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.4 0-13.8 4.1-17.1 10.2z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 35.4 26.9 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.6 5.1C9.1 39.9 15.9 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 3-3.1 5.5-6 7.1l6.6 5.4C39.1 37.3 44 31.4 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+                Lanjutkan dengan Google
+              </button>
+              <p class="muted" style="text-align:center; margin-top:18px;">Belum punya akun? <a href="#" onclick="event.preventDefault(); authTab(document.querySelectorAll('#s-auth .segmented button')[1],'register')" style="color:var(--ink); font-weight:700;">Daftar sebagai Turis</a></p>
+            </div>
+
+            <div id="auth-register" class="hidden">
+              <div class="field"><label>Nama Lengkap</label><input type="text" placeholder="Nama kamu"></div>
+              <div class="field"><label>Email</label><input type="email" placeholder="nama@email.com"></div>
+              <div class="field"><label>Kata Sandi</label><input type="password" placeholder="Minimal 8 karakter"></div>
+              <div class="field"><label>Konfirmasi Kata Sandi</label><input type="password" placeholder="Ulangi kata sandi"></div>
+              <button class="btn btn-primary btn-block" onclick="doLogin()">Daftar sebagai Turis</button>
+              <div class="orline">atau</div>
+              <button class="google-btn" onclick="doLogin()">
+                <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.4 0-13.8 4.1-17.1 10.2z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 35.4 26.9 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.6 5.1C9.1 39.9 15.9 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 3-3.1 5.5-6 7.1l6.6 5.4C39.1 37.3 44 31.4 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+                Daftar dengan Google
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= HOME ================= -->
+        <div class="screen" id="s-home">
+          <div class="topbar">
+            <div>
+              <span class="eyebrow">Selamat datang</span>
+              <h1 style="margin-top:2px;">Halo, Senja 👋</h1>
+            </div>
+            <div class="iconbtn" onclick="showScreen('s-notif')">
+              <span class="badge-dot"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            </div>
+          </div>
+
+          <div class="hero-card">
+            <svg class="tide-wave" viewBox="0 0 400 90" preserveAspectRatio="none" style="opacity:0.35;"><path d="M0,50 C70,20 130,65 210,40 C290,15 340,55 400,35 L400,90 L0,90 Z" fill="#fff"/></svg>
+            <div style="position:relative; display:flex; align-items:center; gap:16px;">
+              <div class="tide-gauge" id="gauge-home"></div>
+              <div>
+                <span class="eyebrow">Skor keberlanjutan</span>
+                <h3 class="display" style="margin:4px 0 6px; font-size:17px;">Trip kamu 72/100 — Baik!</h3>
+                <p style="font-size:11.5px; opacity:0.85; margin:0;">Naik 8 poin sejak pakai feri & akomodasi hijau.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-pad" style="margin-bottom:16px;">
+            <button class="btn btn-sunrise btn-block" onclick="showScreen('s-planner')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z"/></svg>
+              Buat Itinerary Baru dengan AI
+            </button>
+          </div>
+
+          <div class="section-pad" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline;">
+            <span class="eyebrow">Trip aktif</span>
+          </div>
+          <div class="trip-preview" onclick="showScreen('s-itinerary')">
+            <div class="thumb"></div>
+            <div style="flex:1;">
+              <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:14px;">Batam – Singapura, 3D2N</h4>
+              <p class="muted" style="margin:0;">12–14 Sep 2026 · 2 orang · v3</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+
+          <div class="section-pad" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline;">
+            <span class="eyebrow">Rekomendasi eco hari ini</span>
+            <a href="#" onclick="event.preventDefault(); showScreen('s-eco')" style="font-size:11.5px; font-weight:700; color:var(--sea); text-decoration:none;">Lihat semua</a>
+          </div>
+          <div class="reco-scroll">
+            <div class="reco-card">
+              <div class="reco-img" style="background:linear-gradient(135deg,#3E7A5E,#8FC79C);"></div>
+              <div class="reco-body"><span class="tag tag-leaf">Destinasi</span><h4>Hutan Mangrove Rempang</h4><p class="muted" style="margin:0;">Batam · Konservasi</p></div>
+            </div>
+            <div class="reco-card">
+              <div class="reco-img" style="background:linear-gradient(135deg,#2C6B85,#7FB5C9);"></div>
+              <div class="reco-body"><span class="tag tag-sea">Transportasi</span><h4>Feri Cepat Rendah Emisi</h4><p class="muted" style="margin:0;">Batam Center–HarbourFront</p></div>
+            </div>
+            <div class="reco-card">
+              <div class="reco-img" style="background:linear-gradient(135deg,#C98A22,#E7A83B);"></div>
+              <div class="reco-body"><span class="tag tag-sunrise">Kuliner</span><h4>Warung Mie Sagu Bu Nur</h4><p class="muted" style="margin:0;">UMKM lokal Nagoya</p></div>
+            </div>
+          </div>
+
+          <div style="height:70px;"></div>
+          <div class="bottom-nav" id="nav-turis">
+            <div class="nav-item active" data-nav="s-home" onclick="navGo(this,'s-home')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+            <div class="nav-item" data-nav="s-itinerary" onclick="navGo(this,'s-itinerary')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M4 6l5-3 6 3 5-3v15l-5 3-6-3-5 3z"/></svg>Trip</div>
+            <div class="nav-item" data-nav="s-eco" onclick="navGo(this,'s-eco')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.5 7-13a7 7 0 00-14 0c0 6.5 7 13 7 13z"/><path d="M12 12a3 3 0 100-6 3 3 0 000 6z"/></svg>Eco</div>
+            <div class="nav-item" data-nav="s-profile" onclick="navGo(this,'s-profile')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>Profil</div>
+          </div>
+        </div>
+
+        <!-- ================= PLANNER ================= -->
+        <div class="screen" id="s-planner">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Itinerary Baru</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="section-pad">
+            <span class="eyebrow">Lokasi perjalanan</span>
+            <div class="chiprow" style="margin:9px 0 18px;">
+              <div class="chip selected" onclick="chipSelect(this)">Batam</div>
+              <div class="chip" onclick="chipSelect(this)">Singapura</div>
+              <div class="chip" onclick="chipSelect(this)">Batam & Singapura</div>
+            </div>
+
+            <span class="eyebrow">Durasi perjalanan</span>
+            <div class="stepper" style="margin:9px 0 18px;">
+              <button onclick="stepChange('dur',-1)">–</button>
+              <span class="val" id="dur-val">3 hari</span>
+              <button onclick="stepChange('dur',1)">+</button>
+            </div>
+
+            <span class="eyebrow">Jumlah orang (pax)</span>
+            <div class="stepper" style="margin:9px 0 18px;">
+              <button onclick="stepChange('pax',-1)">–</button>
+              <span class="val" id="pax-val">2 orang</span>
+              <button onclick="stepChange('pax',1)">+</button>
+            </div>
+
+            <span class="eyebrow">Budget perjalanan</span>
+            <div style="margin:9px 0 6px;">
+              <input type="range" min="1" max="10" value="4" id="budget-range" oninput="document.getElementById('budget-out').textContent = 'Rp '+(this.value*1250000).toLocaleString('id-ID')">
+              <div class="mono" id="budget-out" style="text-align:center; font-weight:600; font-size:14px; margin-top:4px;">Rp 5.000.000</div>
+            </div>
+
+            <span class="eyebrow" style="display:block; margin-top:12px;">Kategori minat</span>
+            <div class="chiprow" style="margin:9px 0 22px;">
+              <div class="chip selected" onclick="chipSelect(this)">Alam</div>
+              <div class="chip" onclick="chipSelect(this)">Budaya</div>
+              <div class="chip selected" onclick="chipSelect(this)">Kuliner</div>
+              <div class="chip" onclick="chipSelect(this)">Petualangan</div>
+              <div class="chip" onclick="chipSelect(this)">Belanja</div>
+              <div class="chip" onclick="chipSelect(this)">Santai</div>
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="generateItinerary()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z"/></svg>
+              Buat dengan AI
+            </button>
+          </div>
+          <div style="height:24px;"></div>
+        </div>
+
+        <!-- ================= AI LOADING ================= -->
+        <div class="screen" id="s-loading" style="align-items:center; justify-content:center; text-align:center;">
+          <div style="width:64px;height:64px;border-radius:50%; border:4px solid var(--line); border-top-color:var(--leaf); animation:spin 0.9s linear infinite; margin-bottom:22px;"></div>
+          <h3 class="display" style="font-size:17px; margin:0 0 8px;">AI sedang menyusun itinerary…</h3>
+          <p class="muted" style="max-width:220px;">Menghitung rute, jarak tempuh, biaya, dan estimasi emisi karbon.</p>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
+        <!-- ================= ITINERARY ================= -->
+        <div class="screen" id="s-itinerary">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <div style="text-align:center;">
+              <h1 style="font-size:16px;">Batam – Singapura</h1>
+              <span class="muted" style="cursor:pointer;" onclick="openVersions()">v3 · Lihat riwayat</span>
+            </div>
+            <div class="iconbtn" onclick="showScreen('s-share')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8"/></svg></div>
+          </div>
+
+          <div class="section-pad" style="margin-bottom:14px;">
+            <div class="segmented">
+              <button class="active" onclick="itinTab(this,'it-plan')">Itinerary</button>
+              <button onclick="itinTab(this,'it-map')">Peta</button>
+              <button onclick="itinTab(this,'it-cost')">Biaya</button>
+            </div>
+          </div>
+
+          <!-- Itinerary tab -->
+          <div id="it-plan">
+            <div class="section-pad">
+              <div class="tag tag-leaf" style="margin-bottom:12px;">✓ Divalidasi AI · jarak, waktu & emisi telah dicek</div>
+              <div class="tide-track">
+                <svg viewBox="0 0 350 56" preserveAspectRatio="none"><path d="M0,30 C60,10 100,45 175,25 C250,5 290,40 350,22" fill="none" stroke="#C7D6C6" stroke-width="2" stroke-dasharray="3 6"/></svg>
+                <div class="day-pills">
+                  <div class="day-pill active" data-day="1" onclick="daySelect(this,1)"><div class="dp-circle">D1</div><span class="dlabel">Batam</span></div>
+                  <div class="day-pill" data-day="2" onclick="daySelect(this,2)"><div class="dp-circle">D2</div><span class="dlabel">Nyebrang</span></div>
+                  <div class="day-pill" data-day="3" onclick="daySelect(this,3)"><div class="dp-circle">D3</div><span class="dlabel">Singapura</span></div>
+                </div>
+              </div>
+
+              <div class="env-row">
+                <div class="env-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+                  <div><b>29°C</b><small>Cerah berawan</small></div>
+                </div>
+                <div class="env-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                  <div><b>Sedang</b><small>Kepadatan pengunjung</small></div>
+                </div>
+              </div>
+
+              <div id="day-content">
+                <!-- filled by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Map tab -->
+          <div id="it-map" class="hidden section-pad">
+            <div class="map-illustration">
+              <svg viewBox="0 0 350 260" width="100%">
+                <rect width="350" height="260" fill="#DCEAEF"/>
+                <path d="M0,60 Q90,20 180,70 T350,50 L350,0 L0,0 Z" fill="#CFE3D3"/>
+                <path d="M0,260 Q100,210 200,250 T350,220 L350,260 Z" fill="#CFE3D3"/>
+                <path d="M40,90 C120,140 220,110 320,170" stroke="var(--sea)" stroke-width="3" fill="none" stroke-dasharray="6 6"/>
+                <circle cx="40" cy="90" r="7" fill="var(--leaf)"/>
+                <circle cx="180" cy="128" r="7" fill="var(--sunrise-deep)"/>
+                <circle cx="320" cy="170" r="7" fill="var(--sea-deep)"/>
+              </svg>
+              <div class="pin-label" style="top:36px; left:16px;">Nagoya, Batam</div>
+              <div class="pin-label" style="top:150px; left:150px; background:var(--sunrise-deep);">Hotel Eco Bay</div>
+              <div class="pin-label" style="top:186px; left:250px; background:var(--sea-deep);">HarbourFront, SG</div>
+            </div>
+            <button class="btn btn-outline btn-block" onclick="toast('Membuka navigasi GPS…')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+              Navigasi ke destinasi berikutnya
+            </button>
+          </div>
+
+          <!-- Cost tab -->
+          <div id="it-cost" class="hidden section-pad">
+            <div class="cost-bar-wrap">
+              <div class="eyebrow">Estimasi vs budget</div>
+              <div class="cost-bar-track"><div class="cost-bar-fill" style="width:78%;"></div></div>
+              <div style="display:flex; justify-content:space-between;" class="mono"><span style="font-size:12px;">Rp 3.900.000</span><span style="font-size:12px; color:var(--muted);">Budget Rp 5.000.000</span></div>
+            </div>
+            <div class="card">
+              <div class="cost-line" style="border-bottom:1px solid var(--line);"><span>Tiket masuk</span><span class="mono">Rp 350.000</span></div>
+              <div class="cost-line" style="border-bottom:1px solid var(--line);"><span>Transportasi (feri, taksi)</span><span class="mono">Rp 1.200.000</span></div>
+              <div class="cost-line" style="border-bottom:1px solid var(--line);"><span>Makan</span><span class="mono">Rp 850.000</span></div>
+              <div class="cost-line"><span>Akomodasi</span><span class="mono">Rp 1.500.000</span></div>
+            </div>
+          </div>
+
+          <div style="height:12px;"></div>
+          <button class="fab" onclick="openChat()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </button>
+        </div>
+
+        <!-- ================= ECO HUB ================= -->
+        <div class="screen" id="s-eco">
+          <div class="topbar">
+            <h1>Eco Hub</h1>
+            <div class="iconbtn" onclick="showScreen('s-badge-status')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a6 6 0 100-12 6 6 0 000 12z"/><path d="M8.5 13.5L6 22l6-3 6 3-2.5-8.5"/></svg></div>
+          </div>
+          <div class="section-pad" style="margin-bottom:14px;">
+            <div class="segmented">
+              <button class="active" onclick="ecoTab(this,'eco-reco')">Rekomendasi</button>
+              <button onclick="ecoTab(this,'eco-carbon')">Jejak Karbon</button>
+            </div>
+          </div>
+
+          <div id="eco-reco" class="section-pad">
+            <div class="chiprow scroll" style="margin-bottom:14px;">
+              <div class="chip selected" onclick="chipSelect(this)">Destinasi</div>
+              <div class="chip" onclick="chipSelect(this)">Transportasi</div>
+              <div class="chip" onclick="chipSelect(this)">Akomodasi</div>
+              <div class="chip" onclick="chipSelect(this)">Kuliner & UMKM</div>
+            </div>
+
+            <div class="rec-item">
+              <div class="thumb"></div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between;"><h4>Hutan Mangrove Rempang</h4><span class="tag tag-leaf">🌿 Badge</span></div>
+                <p class="muted" style="margin:0 0 8px;">Konservasi mangrove & jalur edukasi, Batam</p>
+                <button class="btn btn-ghost btn-sm" onclick="showScreen('s-badge-submit')">Ajukan Badge</button>
+              </div>
+            </div>
+            <div class="rec-item">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--sea),#8FBFD1);"></div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between;"><h4>Sepeda Listrik Kota Batam</h4><span class="tag tag-sea">0 emisi</span></div>
+                <p class="muted" style="margin:0 0 8px;">Sewa per jam, tersedia di 6 titik</p>
+                <button class="btn btn-ghost btn-sm" onclick="toast('Ditambahkan ke itinerary')">Tambah ke trip</button>
+              </div>
+            </div>
+            <div class="rec-item">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--sunrise-deep),#F0CB85);"></div>
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between;"><h4>Warung Mie Sagu Bu Nur</h4><span class="tag tag-sunrise">UMKM lokal</span></div>
+                <p class="muted" style="margin:0 0 8px;">Kuliner khas Batam, bahan lokal</p>
+                <button class="btn btn-ghost btn-sm" onclick="showScreen('s-badge-submit')">Ajukan Badge</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="eco-carbon" class="section-pad hidden">
+            <div class="card" style="margin-bottom:16px;">
+              <div class="donut-wrap">
+                <svg width="104" height="104" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#E4EAE2" stroke-width="6"></circle>
+                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--sea)" stroke-width="6" stroke-dasharray="42 58" stroke-dashoffset="25" transform="rotate(-90 21 21)"></circle>
+                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--leaf)" stroke-width="6" stroke-dasharray="30 70" stroke-dashoffset="-17" transform="rotate(-90 21 21)"></circle>
+                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--sunrise)" stroke-width="6" stroke-dasharray="28 72" stroke-dashoffset="-47" transform="rotate(-90 21 21)"></circle>
+                  <text x="21" y="19" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" font-weight="700" fill="var(--ink)">18.4</text>
+                  <text x="21" y="26" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="4" fill="var(--muted)">kg CO2</text>
+                </svg>
+                <div style="flex:1;">
+                  <div class="legend-row"><span class="legend-dot" style="background:var(--sea);"></span>Transportasi · 42%</div>
+                  <div class="legend-row"><span class="legend-dot" style="background:var(--leaf);"></span>Akomodasi · 30%</div>
+                  <div class="legend-row"><span class="legend-dot" style="background:var(--sunrise);"></span>Aktivitas & makan · 28%</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+              <div class="tide-gauge" id="gauge-eco"></div>
+              <div>
+                <span class="eyebrow">Sustainability score</span>
+                <p class="muted" style="margin:6px 0 0;">Dihitung dari proporsi transportasi publik & destinasi/akomodasi ramah lingkungan yang kamu pilih.</p>
+              </div>
+            </div>
+
+            <button class="btn btn-sunrise btn-block" onclick="donateSheet()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+              Donasi Carbon Offset
+            </button>
+          </div>
+
+          <div style="height:70px;"></div>
+          <div class="bottom-nav">
+            <div class="nav-item" data-nav="s-home" onclick="navGo(this,'s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+            <div class="nav-item" data-nav="s-itinerary" onclick="navGo(this,'s-itinerary')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M4 6l5-3 6 3 5-3v15l-5 3-6-3-5 3z"/></svg>Trip</div>
+            <div class="nav-item active" data-nav="s-eco" onclick="navGo(this,'s-eco')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.5 7-13a7 7 0 00-14 0c0 6.5 7 13 7 13z"/><path d="M12 12a3 3 0 100-6 3 3 0 000 6z"/></svg>Eco</div>
+            <div class="nav-item" data-nav="s-profile" onclick="navGo(this,'s-profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>Profil</div>
+          </div>
+        </div>
+
+        <!-- ================= BADGE SUBMIT ================= -->
+        <div class="screen" id="s-badge-submit">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-eco')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Ajukan Badge Eco</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="section-pad">
+            <div class="field"><label>Tempat</label><input type="text" value="Hutan Mangrove Rempang" readonly></div>
+            <label style="font-size:12px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px;">Kategori praktik ramah lingkungan</label>
+            <div class="chiprow" style="margin-bottom:16px;">
+              <div class="chip selected" onclick="chipSelect(this)">Pengelolaan Sampah</div>
+              <div class="chip" onclick="chipSelect(this)">Hemat Energi</div>
+              <div class="chip" onclick="chipSelect(this)">Sumber Lokal</div>
+              <div class="chip" onclick="chipSelect(this)">Konservasi Air</div>
+            </div>
+            <div class="field"><label>Deskripsi</label><textarea rows="4" placeholder="Ceritakan praktik ramah lingkungan yang kamu temui…">Menggunakan perahu bertenaga listrik dan program tanam mangrove untuk pengunjung.</textarea></div>
+            <label style="font-size:12px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px;">Foto bukti</label>
+            <div class="upload-box" style="margin-bottom:18px;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.6" style="margin-bottom:6px;"><path d="M4 16l4.6-4.6a2 2 0 012.8 0L16 16M14 14l1.6-1.6a2 2 0 012.8 0L20 14M4 6h16v14H4z"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+              <div>Ketuk untuk unggah foto (JPG/PNG)</div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="submitBadge()">Kirim Pengajuan</button>
+          </div>
+        </div>
+
+        <!-- ================= BADGE STATUS ================= -->
+        <div class="screen" id="s-badge-status">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-eco')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Status Pengajuan</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="section-pad">
+            <div class="status-item">
+              <div class="thumb"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Hutan Mangrove Rempang</h4>
+                <p class="muted" style="margin:0 0 6px;">Diajukan 12 Agu 2026</p>
+                <span class="pill-status pill-wait">Menunggu</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--leaf),#8FC79C);"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Kedai Kopi Nagoya Hijau</h4>
+                <p class="muted" style="margin:0 0 6px;">Diajukan 3 Agu 2026</p>
+                <span class="pill-status pill-ok">Disetujui</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--berry),#E39CA8);"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Resort Pantai Melur</h4>
+                <p class="muted" style="margin:0 0 6px;">Diajukan 28 Jul 2026</p>
+                <span class="pill-status pill-no">Ditolak</span>
+                <p class="muted" style="margin:6px 0 0; font-style:italic;">Catatan: foto bukti kurang jelas, mohon unggah ulang.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TRIP SHARE ================= -->
+        <div class="screen" id="s-share">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-itinerary')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Bagikan Trip</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="section-pad">
+            <div class="field"><label>Undang lewat email</label><input type="email" placeholder="teman@email.com"></div>
+            <div class="chiprow" style="margin-bottom:18px;">
+              <div class="chip selected" onclick="chipSelect(this)">Bisa Edit</div>
+              <div class="chip" onclick="chipSelect(this)">Bisa Lihat</div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="toast('Undangan terkirim')" style="margin-bottom:14px;">Kirim Undangan</button>
+
+            <div class="card" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+              <div>
+                <div style="font-weight:700; font-size:13px;">Tautan berbagi</div>
+                <div class="mono muted" style="font-size:11px;">ecotour.ai/trip/bt-sg-3d2n</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="toast('Tautan disalin')">Salin</button>
+            </div>
+
+            <span class="eyebrow">Kolaborator</span>
+            <div style="margin-top:12px;">
+              <div class="menu-row" style="padding:12px 0;">
+                <div class="mr-left"><div class="avatar" style="width:38px;height:38px;font-size:14px;">S</div><div><div class="mr-label">Senja (kamu)</div><div class="muted" style="font-size:11px;">Pemilik</div></div></div>
+              </div>
+              <div class="menu-row" style="padding:12px 0;">
+                <div class="mr-left"><div class="avatar" style="width:38px;height:38px;font-size:14px; background:linear-gradient(135deg,var(--sunrise),var(--berry));">R</div><div><div class="mr-label">Rara</div><div class="muted" style="font-size:11px;">Bisa Edit</div></div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" onclick="toast('Kolaborator dihapus')" style="cursor:pointer;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= NOTIFICATIONS ================= -->
+        <div class="screen" id="s-notif">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Notifikasi</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-icon" style="background:var(--leaf-soft); color:var(--leaf);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <div><div style="font-weight:700; font-size:13px;">Badge disetujui</div><p class="muted" style="margin:2px 0 0;">Kedai Kopi Nagoya Hijau kini bertanda eco-friendly.</p><span class="muted" style="font-size:10.5px;">2 jam lalu</span></div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-icon" style="background:#DCEAF0; color:var(--sea);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+            <div><div style="font-weight:700; font-size:13px;">Itinerary diperbarui</div><p class="muted" style="margin:2px 0 0;">AI mengganti makan siang hari ke-2 sesuai permintaanmu.</p><span class="muted" style="font-size:10.5px;">Kemarin</span></div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-icon" style="background:#FBEACB; color:var(--sunrise-deep);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
+            <div><div style="font-weight:700; font-size:13px;">Perubahan cuaca</div><p class="muted" style="margin:2px 0 0;">Hujan ringan diperkirakan pada hari ke-3 di Singapura.</p><span class="muted" style="font-size:10.5px;">Kemarin</span></div>
+          </div>
+          <div class="notif-item" style="border-bottom:none;">
+            <div class="notif-icon" style="background:var(--berry-soft); color:var(--berry);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg></div>
+            <div><div style="font-weight:700; font-size:13px;">Kolaborator bergabung</div><p class="muted" style="margin:2px 0 0;">Rara kini bisa mengedit trip Batam–Singapura.</p><span class="muted" style="font-size:10.5px;">3 hari lalu</span></div>
+          </div>
+        </div>
+
+        <!-- ================= PROFILE ================= -->
+        <div class="screen" id="s-profile">
+          <div class="topbar"><h1>Profil</h1><div style="width:36px;"></div></div>
+          <div class="profile-head">
+            <div class="avatar">S</div>
+            <div>
+              <div style="font-weight:700; font-size:16px;">Senja</div>
+              <div class="muted">senja@email.com</div>
+            </div>
+          </div>
+
+          <div class="section-pad" style="margin-bottom:6px;"><span class="eyebrow">Akun</span></div>
+          <div class="menu-row" onclick="toast('Buka form ubah kata sandi')">
+            <div class="mr-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span class="mr-label">Ubah Kata Sandi</span></div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="menu-row" onclick="toast('Buka form ubah email')">
+            <div class="mr-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span class="mr-label">Ubah Alamat Email</span></div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="menu-row" onclick="showScreen('s-badge-status')">
+            <div class="mr-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a6 6 0 100-12 6 6 0 000 12z"/><path d="M8.5 13.5L6 22l6-3 6 3-2.5-8.5"/></svg><span class="mr-label">Status Pengajuan Badge</span></div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+
+          <div class="section-pad" style="margin:16px 0 6px;"><span class="eyebrow">Preferensi</span></div>
+          <div style="padding:0 20px 8px;">
+            <div class="muted" style="margin-bottom:8px; font-size:12px; font-weight:700; color:var(--ink-soft);">Bahasa</div>
+            <div class="chiprow" style="margin-bottom:16px;">
+              <div class="chip selected" onclick="chipSelect(this)">Indonesia</div>
+              <div class="chip" onclick="chipSelect(this)">English</div>
+              <div class="chip" onclick="chipSelect(this)">中文</div>
+            </div>
+            <div class="muted" style="margin-bottom:8px; font-size:12px; font-weight:700; color:var(--ink-soft);">Minat Wisata</div>
+            <div class="chiprow">
+              <div class="chip selected" onclick="chipSelect(this)">Alam</div>
+              <div class="chip selected" onclick="chipSelect(this)">Kuliner</div>
+              <div class="chip" onclick="chipSelect(this)">Budaya</div>
+              <div class="chip" onclick="chipSelect(this)">Belanja</div>
+            </div>
+          </div>
+
+          <div class="section-pad" style="margin:18px 0 6px;"><span class="eyebrow">Mode Prototipe</span></div>
+          <div class="menu-row">
+            <div class="mr-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/></svg><span class="mr-label">Lihat sebagai Admin</span></div>
+            <div class="toggle" id="admin-toggle" onclick="toggleAdmin(this)"><div class="knob"></div></div>
+          </div>
+
+          <div class="section-pad" style="margin-top:22px;">
+            <button class="btn btn-danger-outline btn-block" onclick="doLogout()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Keluar
+            </button>
+          </div>
+          <div style="height:80px;"></div>
+          <div class="bottom-nav">
+            <div class="nav-item" data-nav="s-home" onclick="navGo(this,'s-home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+            <div class="nav-item" data-nav="s-itinerary" onclick="navGo(this,'s-itinerary')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M4 6l5-3 6 3 5-3v15l-5 3-6-3-5 3z"/></svg>Trip</div>
+            <div class="nav-item" data-nav="s-eco" onclick="navGo(this,'s-eco')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.5 7-13a7 7 0 00-14 0c0 6.5 7 13 7 13z"/><path d="M12 12a3 3 0 100-6 3 3 0 000 6z"/></svg>Eco</div>
+            <div class="nav-item active" data-nav="s-profile" onclick="navGo(this,'s-profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>Profil</div>
+          </div>
+        </div>
+
+        <!-- ================= ADMIN LIST ================= -->
+        <div class="screen" id="s-admin-list">
+          <div class="topbar"><h1>Verifikasi Badge</h1><span class="tag tag-sunrise">3 menunggu</span></div>
+          <div class="section-pad">
+            <div class="admin-card" onclick="showScreen('s-admin-detail')">
+              <div class="thumb"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Hutan Mangrove Rempang</h4>
+                <p class="muted" style="margin:0 0 4px;">Diajukan oleh Senja · 12 Agu 2026</p>
+                <span class="tag tag-sunrise">Menunggu</span>
+              </div>
+            </div>
+            <div class="admin-card" onclick="showScreen('s-admin-detail')">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--sea),#8FBFD1);"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Homestay Bambu Sekupang</h4>
+                <p class="muted" style="margin:0 0 4px;">Diajukan oleh Dimas · 11 Agu 2026</p>
+                <span class="tag tag-sunrise">Menunggu</span>
+              </div>
+            </div>
+            <div class="admin-card" onclick="showScreen('s-admin-detail')">
+              <div class="thumb" style="background:linear-gradient(135deg,var(--sunrise-deep),#F0CB85);"></div>
+              <div style="flex:1;">
+                <h4 style="margin:0 0 3px; font-family:'Fraunces',serif; font-size:13.5px;">Warung Mie Sagu Bu Nur</h4>
+                <p class="muted" style="margin:0 0 4px;">Diajukan oleh Nadya · 10 Agu 2026</p>
+                <span class="tag tag-sunrise">Menunggu</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:70px;"></div>
+          <div class="bottom-nav" id="nav-admin">
+            <div class="nav-item active" data-nav="s-admin-list" onclick="navGo(this,'s-admin-list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a6 6 0 100-12 6 6 0 000 12z"/><path d="M8.5 13.5L6 22l6-3 6 3-2.5-8.5"/></svg>Verifikasi</div>
+            <div class="nav-item" data-nav="s-profile" onclick="navGo(this,'s-profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>Profil</div>
+          </div>
+        </div>
+
+        <!-- ================= ADMIN DETAIL ================= -->
+        <div class="screen" id="s-admin-detail">
+          <div class="topbar">
+            <div class="iconbtn" onclick="showScreen('s-admin-list')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <h1>Detail Pengajuan</h1>
+            <div style="width:36px;"></div>
+          </div>
+          <div class="section-pad">
+            <div style="height:160px; border-radius:16px; background:linear-gradient(135deg,#3E7A5E,#8FC79C); margin-bottom:14px;"></div>
+            <h3 class="display" style="margin:0 0 4px; font-size:17px;">Hutan Mangrove Rempang</h3>
+            <p class="muted" style="margin:0 0 14px;">Diajukan oleh Senja · 12 Agu 2026 · Batam</p>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="eyebrow" style="margin-bottom:6px;">Kategori</div>
+              <div class="chiprow" style="margin-bottom:14px;"><span class="tag tag-leaf">Pengelolaan Sampah</span><span class="tag tag-sea">Konservasi Air</span></div>
+              <div class="eyebrow" style="margin-bottom:6px;">Deskripsi</div>
+              <p style="font-size:13px; margin:0;">Menggunakan perahu bertenaga listrik dan program tanam mangrove untuk pengunjung.</p>
+            </div>
+            <div id="admin-decision-area">
+              <div style="display:flex; gap:10px; margin-bottom:14px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="approveBadge()">Setujui</button>
+                <button class="btn btn-danger-outline" style="flex:1;" onclick="showRejectNote()">Tolak</button>
+              </div>
+              <div id="reject-note" class="hidden">
+                <div class="field"><label>Catatan alasan penolakan</label><textarea rows="3" placeholder="Jelaskan alasan penolakan…"></textarea></div>
+                <button class="btn btn-danger-outline btn-block" onclick="rejectBadge()">Kirim Penolakan</button>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="eyebrow" style="margin-bottom:8px;">Riwayat keputusan</div>
+            <p class="muted" style="margin:0 0 4px;">08 Agu 2026 — Disetujui: Kedai Kopi Nagoya Hijau</p>
+            <p class="muted" style="margin:0;">02 Agu 2026 — Ditolak: Resort Pantai Melur</p>
+          </div>
+        </div>
+
+      </div><!-- /screen-area -->
+
+      <!-- chat sheet overlay -->
+      <div class="overlay" id="chat-overlay" onclick="closeChat()"></div>
+      <div class="sheet" id="chat-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+          <div style="display:flex; align-items:center; gap:9px;">
+            <div style="width:30px;height:30px;border-radius:50%; background:var(--ink); display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z"/></svg>
+            </div>
+            <div><div style="font-weight:700; font-size:13.5px;">Tanya AI seputar trip</div><div class="muted" style="font-size:10.5px;">Balasan real-time, langsung ke itinerary</div></div>
+          </div>
+          <div class="iconbtn" onclick="closeChat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        </div>
+        <div class="chat-body" id="chat-body">
+          <div class="msg ai">Halo! Aku bisa bantu ubah itinerary atau jawab pertanyaan seputar trip Batam–Singapura kamu.</div>
+          <div class="msg user">revisi hari ke-2, ganti makan siang</div>
+          <div class="msg ai">Siap — makan siang hari ke-2 diganti ke <b>Kedai Kopi Nagoya Hijau</b> (UMKM lokal, dekat rute feri).</div>
+          <div class="msg system">Itinerary diperbarui ✓ · v3 tersimpan</div>
+          <div class="msg ai">Ada lagi yang mau diubah? Kamu juga bisa tanya soal cuaca atau lokasi ATM terdekat.</div>
+        </div>
+        <div class="quickreplies">
+          <div class="chip" onclick="quickChat(this)">Ganti tempat ini</div>
+          <div class="chip" onclick="quickChat(this)">Cuaca hari ini?</div>
+          <div class="chip" onclick="quickChat(this)">ATM terdekat</div>
+          <div class="chip" onclick="quickChat(this)">Kembalikan ke v2</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Tulis pesan…">
+          <button class="sendbtn" onclick="sendChat()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- generic mini overlay for versions/donate -->
+      <div class="overlay" id="mini-overlay" onclick="closeMini()"></div>
+      <div class="sheet" id="mini-sheet" style="max-height:50%;">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><div style="font-weight:700; font-size:14px;" id="mini-title">Riwayat Versi</div><div class="iconbtn" onclick="closeMini()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div class="chat-body" id="mini-body"></div>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <div class="jumpbar" id="jumpbar"></div>
+</div>
+
+<script>
+/* ---------------- screen router ---------------- */
+const screenOrder = ["s-onboard","s-auth","s-home","s-planner","s-loading","s-itinerary","s-eco","s-badge-submit","s-badge-status","s-share","s-notif","s-profile","s-admin-list","s-admin-detail"];
+const screenLabels = {"s-onboard":"Onboarding","s-auth":"Masuk/Daftar","s-home":"Home","s-planner":"Buat Itinerary","s-loading":"AI Loading","s-itinerary":"Itinerary","s-eco":"Eco Hub","s-badge-submit":"Ajukan Badge","s-badge-status":"Status Badge","s-share":"Bagikan Trip","s-notif":"Notifikasi","s-profile":"Profil","s-admin-list":"Admin: Daftar","s-admin-detail":"Admin: Detail"};
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('#jumpbar button').forEach(b=>b.classList.toggle('active', b.dataset.id===id));
+  // sync bottom nav highlight if applicable
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.nav===id));
+}
+function navGo(el,id){ showScreen(id); }
+
+const jumpbar = document.getElementById('jumpbar');
+screenOrder.forEach(id=>{
+  const b = document.createElement('button');
+  b.textContent = screenLabels[id];
+  b.dataset.id = id;
+  b.onclick = ()=>showScreen(id);
+  jumpbar.appendChild(b);
+});
+jumpbar.firstChild.classList.add('active');
+
+/* ---------------- onboarding ---------------- */
+function obGo(i){
+  document.querySelectorAll('.ob-slide').forEach(s=>s.classList.remove('active'));
+  document.querySelector('.ob-slide[data-slide="'+i+'"]').classList.add('active');
+}
+
+/* ---------------- auth ---------------- */
+function authTab(btn, which){
+  document.querySelectorAll('#s-auth .segmented button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('auth-login').classList.toggle('hidden', which!=='login');
+  document.getElementById('auth-register').classList.toggle('hidden', which!=='register');
+}
+function doLogin(){ showScreen('s-home'); }
+function doLogout(){ document.getElementById('admin-toggle').classList.remove('on'); document.getElementById('nav-turis') && null; showScreen('s-auth'); }
+
+/* ---------------- generic chip select ---------------- */
+function chipSelect(el){
+  // toggle within its own row only (siblings)
+  el.classList.toggle('selected');
+}
+
+/* ---------------- stepper ---------------- */
+let state = {dur:3, pax:2};
+function stepChange(key, delta){
+  state[key] = Math.max(1, state[key]+delta);
+  if(key==='dur') document.getElementById('dur-val').textContent = state[key]+' hari';
+  if(key==='pax') document.getElementById('pax-val').textContent = state[key]+' orang';
+}
+
+/* ---------------- planner -> loading -> itinerary ---------------- */
+function generateItinerary(){
+  showScreen('s-loading');
+  setTimeout(()=>{ showScreen('s-itinerary'); }, 1400);
+}
+
+/* ---------------- itinerary segmented tabs ---------------- */
+function itinTab(btn, which){
+  document.querySelectorAll('#s-itinerary .segmented button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['it-plan','it-map','it-cost'].forEach(id=>document.getElementById(id).classList.toggle('hidden', id!==which));
+}
+
+/* ---------------- eco hub segmented tabs ---------------- */
+function ecoTab(btn, which){
+  document.querySelectorAll('#s-eco .segmented button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('eco-reco').classList.toggle('hidden', which!=='eco-reco');
+  document.getElementById('eco-carbon').classList.toggle('hidden', which!=='eco-carbon');
+}
+
+/* ---------------- itinerary day content ---------------- */
+const dayData = {
+  1: [
+    {t:"08:00", title:"Sarapan di Nagoya Hill", cat:"Kuliner", desc:"Kopi lokal & kue khas Batam sebelum memulai hari."},
+    {t:"10:00", title:"Hutan Mangrove Rempang", cat:"Alam · Badge 🌿", desc:"Susur mangrove dengan perahu listrik, edukasi konservasi."},
+    {t:"14:00", title:"Kampung Vietnam & Galang", cat:"Budaya", desc:"Situs sejarah kamp pengungsi, berjalan kaki ringan."},
+  ],
+  2: [
+    {t:"07:30", title:"Feri Batam Center → HarbourFront", cat:"Transportasi · rendah emisi", desc:"Penyeberangan feri cepat menuju Singapura, ±50 menit."},
+    {t:"10:30", title:"Gardens by the Bay", cat:"Alam", desc:"Jelajah Cloud Forest & Supertree Grove."},
+    {t:"15:00", title:"Check-in Hotel Eco Bay", cat:"Akomodasi · Badge 🌿", desc:"Hotel bersertifikat hijau dekat Marina Bay."},
+  ],
+  3: [
+    {t:"09:00", title:"Pasir Ris Mangrove Boardwalk", cat:"Alam", desc:"Jalur kayu di antara hutan mangrove Singapura."},
+    {t:"13:00", title:"Makan siang di Tiong Bahru", cat:"Kuliner · UMKM", desc:"Kafe lokal dengan menu berbahan lokal."},
+    {t:"17:00", title:"Feri kembali ke Batam", cat:"Transportasi", desc:"Kembali ke Batam Center, sekaligus akhir trip."},
+  ],
+};
+function renderDay(d){
+  const wrap = document.getElementById('day-content');
+  wrap.innerHTML = '';
+  dayData[d].forEach((a,i)=>{
+    const isLast = i===dayData[d].length-1;
+    wrap.innerHTML += `
+      <div class="activity">
+        <div class="time">${a.t}</div>
+        <div class="line-wrap"><div class="dot-node"></div>${isLast?'':'<div class="line-node"></div>'}</div>
+        <div class="abody">
+          <h4>${a.title}</h4>
+          <span class="tag tag-leaf" style="margin-bottom:6px; display:inline-block;">${a.cat}</span>
+          <p class="muted" style="margin:2px 0 0;">${a.desc}</p>
+          <div class="activity-foot">
+            <span class="muted" style="font-size:11px;">Divalidasi jarak & emisi ✓</span>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Mencari alternatif tempat…')">Ganti</button>
+          </div>
+        </div>
+      </div>`;
+  });
+}
+function daySelect(el,d){
+  document.querySelectorAll('.day-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  renderDay(d);
+}
+renderDay(1);
+
+/* ---------------- versions mini sheet ---------------- */
+function openVersions(){
+  document.getElementById('mini-title').textContent = 'Riwayat Versi Itinerary';
+  document.getElementById('mini-body').innerHTML = `
+    <div class="msg system" style="margin:6px auto;">v3 — versi aktif</div>
+    <div class="rec-item" style="margin-bottom:10px;"><div class="thumb" style="width:44px;height:44px;"></div><div style="flex:1;"><h4 style="font-size:12.5px;">v3 · Makan siang diganti (hari 2)</h4><p class="muted" style="margin:0;">Baru saja</p></div></div>
+    <div class="rec-item" style="margin-bottom:10px;"><div class="thumb" style="width:44px;height:44px; background:linear-gradient(135deg,var(--sea),#8FBFD1);"></div><div style="flex:1;"><h4 style="font-size:12.5px;">v2 · Tambah Gardens by the Bay</h4><p class="muted" style="margin:0 0 6px;">Kemarin</p><button class="btn btn-ghost btn-sm" onclick="toast('Dikembalikan ke v2')">Kembalikan</button></div></div>
+    <div class="rec-item"><div class="thumb" style="width:44px;height:44px; background:linear-gradient(135deg,var(--sunrise-deep),#F0CB85);"></div><div style="flex:1;"><h4 style="font-size:12.5px;">v1 · Itinerary awal dari AI</h4><p class="muted" style="margin:0 0 6px;">3 hari lalu</p><button class="btn btn-ghost btn-sm" onclick="toast('Dikembalikan ke v1')">Kembalikan</button></div></div>
+  `;
+  document.getElementById('mini-overlay').classList.add('active');
+  document.getElementById('mini-sheet').classList.add('open');
+}
+function donateSheet(){
+  document.getElementById('mini-title').textContent = 'Donasi Carbon Offset';
+  document.getElementById('mini-body').innerHTML = `
+    <p style="font-size:13px; margin:4px 0 14px;">Tebus estimasi 18.4 kg CO2 dari trip ini lewat program penanaman mangrove lokal.</p>
+    <div class="chiprow" style="margin-bottom:16px;"><div class="chip selected" onclick="chipSelect(this)">Rp 25.000</div><div class="chip" onclick="chipSelect(this)">Rp 50.000</div><div class="chip" onclick="chipSelect(this)">Rp 100.000</div></div>
+    <button class="btn btn-sunrise btn-block" onclick="closeMini(); toast('Terima kasih! Donasi berhasil')">Donasi Sekarang</button>
+  `;
+  document.getElementById('mini-overlay').classList.add('active');
+  document.getElementById('mini-sheet').classList.add('open');
+}
+function closeMini(){
+  document.getElementById('mini-overlay').classList.remove('active');
+  document.getElementById('mini-sheet').classList.remove('open');
+}
+
+/* ---------------- chat sheet ---------------- */
+function openChat(){
+  document.getElementById('chat-overlay').classList.add('active');
+  document.getElementById('chat-sheet').classList.add('open');
+}
+function closeChat(){
+  document.getElementById('chat-overlay').classList.remove('active');
+  document.getElementById('chat-sheet').classList.remove('open');
+}
+function sendChat(){
+  const input = document.getElementById('chat-input');
+  if(!input.value.trim()) return;
+  const body = document.getElementById('chat-body');
+  body.innerHTML += `<div class="msg user">${input.value}</div>`;
+  input.value='';
+  body.scrollTop = body.scrollHeight;
+  setTimeout(()=>{
+    body.innerHTML += `<div class="msg ai">Baik, aku sesuaikan itinerary-mu sekarang.</div><div class="msg system">Itinerary diperbarui ✓</div>`;
+    body.scrollTop = body.scrollHeight;
+  }, 700);
+}
+function quickChat(el){
+  document.getElementById('chat-input').value = el.textContent;
+  sendChat();
+}
+
+/* ---------------- badge submit ---------------- */
+function submitBadge(){
+  toast('Pengajuan badge terkirim');
+  setTimeout(()=>showScreen('s-badge-status'), 500);
+}
+
+/* ---------------- admin decisions ---------------- */
+function showRejectNote(){ document.getElementById('reject-note').classList.remove('hidden'); }
+function approveBadge(){ toast('Badge disetujui'); setTimeout(()=>showScreen('s-admin-list'),500); }
+function rejectBadge(){ toast('Pengajuan ditolak'); setTimeout(()=>showScreen('s-admin-list'),500); }
+
+/* ---------------- admin mode toggle ---------------- */
+function toggleAdmin(el){
+  el.classList.toggle('on');
+  const isAdmin = el.classList.contains('on');
+  if(isAdmin){ toast('Mode Admin aktif'); showScreen('s-admin-list'); }
+  else { toast('Mode Turis aktif'); showScreen('s-home'); }
+}
+
+/* ---------------- toast ---------------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1900);
+}
+
+/* ---------------- tide gauge renderer (signature element) ---------------- */
+function drawGauge(id, score, colorVar){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const level = 100 - score; // fill from bottom
+  el.innerHTML = `
+    <svg viewBox="0 0 100 100">
+      <defs>
+        <clipPath id="clip-${id}"><circle cx="50" cy="50" r="44"/></clipPath>
+      </defs>
+      <circle cx="50" cy="50" r="44" fill="#fff" stroke="#E4EAE2" stroke-width="4"/>
+      <g clip-path="url(#clip-${id})">
+        <path d="M0,${level} C15,${level-6} 35,${level+6} 50,${level} C65,${level-6} 85,${level+6} 100,${level} L100,100 L0,100 Z" fill="${colorVar}" opacity="0.9"/>
+      </g>
+      <circle cx="50" cy="50" r="44" fill="none" stroke="var(--ink)" stroke-width="1.5" opacity="0.08"/>
+    </svg>
+    <div class="tg-num"><b>${score}</b><span>Skor</span></div>
+  `;
+}
+drawGauge('gauge-home', 72, '#4C8B5A');
+drawGauge('gauge-eco', 72, '#2C6B85');
+</script>
+</body>
+</html>

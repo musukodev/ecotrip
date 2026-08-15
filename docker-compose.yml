@@ -17,25 +17,5 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ecotrip_backend
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: ecotrip
-      JWT_SECRET: ecotrip-super-secret-key-change-in-production
-      PORT: 8080
-    ports:
-      - "8080:8080"
-
 volumes:
   postgres_data:

@@ -1,6 +1,6 @@
 export interface ForecastDay {
   day: string;
-  icon: 'cloud' | 'cloud-rain' | 'sun' | 'cloud-sun';
+  icon: 'cloud' | 'cloud-rain' | 'sun';
   temp: number;
 }
 
@@ -49,7 +49,7 @@ export const weather: Weather = {
     { day: 'Tomorrow', icon: 'cloud', temp: 30 },
     { day: 'Mon', icon: 'cloud-rain', temp: 28 },
     { day: 'Tue', icon: 'sun', temp: 32 },
-    { day: 'Wed', icon: 'cloud-sun', temp: 31 },
+    { day: 'Wed', icon: 'sun', temp: 31 },
   ],
 };
 

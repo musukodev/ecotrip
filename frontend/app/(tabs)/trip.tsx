@@ -1,89 +1,89 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Linking,
-  Share,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-const TRIPS_DATA = [
-  {
-    id: "1",
-    title: "Rempang Mangrove",
-    badge: "Eco-Badge",
-    badgeColor: "#E2EFE9",
-    badgeTextColor: "#0E4D3C",
-    description: "Mangrove conservation and education trail, Batam",
-    location: "Jl. Trans Barelang, Rempang, Batam",
-    hours: "Open 08:00 - 17:00",
-    phone: "+62 812-3456-7890",
-  },
-  {
-    id: "2",
-    title: "Batam Botanical Forest",
-    badge: "Sustainable",
-    badgeColor: "#E2EFE9",
-    badgeTextColor: "#0E4D3C",
-    description: "Tropical flora collection and nature walks",
-    location: "Sembulang, Galang, Batam City",
-    hours: "Open 09:00 - 18:00",
-    phone: "+62 811-7777-8888",
-  },
-  {
-    id: "3",
-    title: "Ocarina Coast",
-    badge: "Local Heritage",
-    badgeColor: "#FDF3E6",
-    badgeTextColor: "#C07D2B",
-    description: "Cultural performances and scenic sea views",
-    location: "Sadai, Bengkong, Batam City",
-    hours: "Open 08:00 - 22:00",
-    phone: "+62 778-456-789",
-  },
-];
+import { destinationService, Destination } from "@/services/destinationService";
 
 export default function TripScreen() {
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState("Nature");
+  const [activeCategory, setActiveCategory] = useState("nature");
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const categories = [
-    { name: "Nature", icon: "leaf-outline" },
-    { name: "Culture", icon: "home-outline" },
-    { name: "Culinary", icon: "restaurant-outline" },
+    { key: "nature", name: "Nature", icon: "leaf-outline" },
+    { key: "culture", name: "Culture", icon: "color-palette-outline" },
+    { key: "culinary", name: "Culinary", icon: "restaurant-outline" },
+    { key: "adventure", name: "Adventure", icon: "walk-outline" },
+    { key: "shopping", name: "Shopping", icon: "bag-handle-outline" },
+    { key: "relaxation", name: "Relaxation", icon: "body-outline" },
   ];
+
+  const fetchDestinations = async (cat: string) => {
+    try {
+      setLoading(true);
+      const data = await destinationService.getDestinations(cat);
+      setDestinations(data);
+    } catch (e) {
+      console.error("Failed to load destinations", e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDestinations(activeCategory);
+  }, [activeCategory]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDestinations(activeCategory);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#0E4D3C"]} />}
       >
         {/* Top Header */}
         <View style={styles.topHeader}>
-          <Text style={styles.brandTitle}>EcoTravel</Text>
-          <TouchableOpacity style={styles.profileBtn}>
+          <Text style={styles.brandTitle}>EcoTravel Batam</Text>
+          <TouchableOpacity style={styles.profileBtn} onPress={() => router.push('/(tabs)/profile')}>
             <Ionicons name="person-outline" size={20} color="#0E4D3C" />
           </TouchableOpacity>
         </View>
 
-        {/* Category Pills */}
-        <View style={styles.categoryContainer}>
+        {/* Category Pills (Horizontal Scroll) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryContainer}
+          contentContainerStyle={{ paddingRight: 16 }}
+        >
           {categories.map((cat) => {
-            const isActive = activeCategory === cat.name;
+            const isActive = activeCategory === cat.key;
             return (
               <TouchableOpacity
-                key={cat.name}
+                key={cat.key}
                 style={[
                   styles.categoryPill,
                   isActive && styles.categoryPillActive,
                 ]}
-                onPress={() => setActiveCategory(cat.name)}
+                onPress={() => setActiveCategory(cat.key)}
               >
                 <Ionicons
                   name={cat.icon as any}
@@ -102,61 +102,78 @@ export default function TripScreen() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
-        {/* Cards List */}
-        {TRIPS_DATA.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.imagePlaceholder} />
-              <View style={styles.cardInfo}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <View
-                    style={[styles.badge, { backgroundColor: item.badgeColor }]}
-                  >
-                    <Ionicons
-                      name="shield-checkmark"
-                      size={10}
-                      color={item.badgeTextColor}
-                      style={{ marginRight: 2 }}
-                    />
-                    <Text
-                      style={[styles.badgeText, { color: item.badgeTextColor }]}
-                    >
-                      {item.badge}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.cardDescription}>{item.description}</Text>
-              </View>
-            </View>
-
-            {/* Metadata Rows */}
-            <View style={styles.metaContainer}>
-              <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={14} color="#666" />
-                <Text style={styles.metaText}>{item.location}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={14} color="#666" />
-                <Text style={styles.metaText}>{item.hours}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons name="call-outline" size={14} color="#666" />
-                <Text style={styles.metaText}>{item.phone}</Text>
-              </View>
-            </View>
-
-            {/* View Details Link -> Mengarah ke app/trip/[id].tsx */}
-            <TouchableOpacity
-              style={styles.viewDetailBtn}
-              onPress={() => router.push(`/trip/${item.id}`)}
-            >
-              <Text style={styles.viewDetailText}>View Details</Text>
-            </TouchableOpacity>
+        {/* Loading Spinner */}
+        {loading && !refreshing ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#0E4D3C" />
           </View>
-        ))}
+        ) : destinations.length === 0 ? (
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>Belum ada destinasi di kategori ini.</Text>
+          </View>
+        ) : (
+          /* Cards List */
+          destinations.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                {item.photos && item.photos[0] ? (
+                  <Image source={{ uri: item.photos[0] }} style={styles.imagePlaceholder} />
+                ) : (
+                  <View style={styles.imagePlaceholder} />
+                )}
+                <View style={styles.cardInfo}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <View style={styles.badge}>
+                      <Ionicons
+                        name="shield-checkmark"
+                        size={10}
+                        color="#0E4D3C"
+                        style={{ marginRight: 2 }}
+                      />
+                      <Text style={styles.badgeText}>
+                        Eco {item.eco_score ? item.eco_score.toFixed(1) : "N/A"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.cardDescription} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Metadata Rows */}
+              <View style={styles.metaContainer}>
+                <View style={styles.metaRow}>
+                  <Ionicons name="location-outline" size={14} color="#666" />
+                  <Text style={styles.metaText}>{item.location}</Text>
+                </View>
+                {item.opening_hours && (
+                  <View style={styles.metaRow}>
+                    <Ionicons name="time-outline" size={14} color="#666" />
+                    <Text style={styles.metaText}>{item.opening_hours}</Text>
+                  </View>
+                )}
+                {item.phone && (
+                  <View style={styles.metaRow}>
+                    <Ionicons name="call-outline" size={14} color="#666" />
+                    <Text style={styles.metaText}>{item.phone}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* View Details Link */}
+              <TouchableOpacity
+                style={styles.viewDetailBtn}
+                onPress={() => router.push(`/trip/${item.id}`)}
+              >
+                <Text style={styles.viewDetailText}>View Details</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -165,6 +182,8 @@ export default function TripScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F2F9F6" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
+  center: { paddingVertical: 40, alignItems: "center", justifyContent: "center" },
+  emptyText: { color: "#888", fontSize: 14 },
   topHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -224,12 +243,13 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#E2EFE9",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     marginLeft: 6,
   },
-  badgeText: { fontSize: 10, fontWeight: "700" },
+  badgeText: { fontSize: 10, fontWeight: "700", color: "#0E4D3C" },
   cardDescription: { fontSize: 12, color: "#666", marginTop: 4 },
   metaContainer: { marginBottom: 12 },
   metaRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },

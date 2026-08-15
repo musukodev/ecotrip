@@ -1,0 +1,558 @@
+{
+  "info": {
+    "name": "EcoTour AI — Batam Eco-Tourism (Revisi)",
+    "description": "Koleksi API EcoTour AI Batam — MF-001 s.d. MF-017 (F-001 s.d. F-049).\n\nFitur Utama:\n- Autentikasi & Akun\n- Widget Cuaca & Prakiraan Batam\n- Trip Unggulan (Featured Trips)\n- Direktori Destinasi & Akomodasi\n- Rating & Eco Score Otomatis (3 aspek: Kebersihan 35%, Lingkungan 40%, Kepedulian 25%)\n- Rute Feri (SG/MY -> Batam)\n- AI Smart Itinerary (Gemini)\n- Chat AI Terintegrasi & Rollback Versi\n- Carbon Calculator & Carbon Offset\n- Trip Collaboration & Notifikasi",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth (MF-001)",
+      "item": [
+        {
+          "name": "Register (Wisatawan) — F-001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.environment.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senja Pratiwi\",\n  \"email\": \"senja.tourist@email.com\",\n  \"password\": \"123456\",\n  \"role\": \"tourist\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "Register (Admin Destinasi & Kuliner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.environment.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pengelola Mangrove Rempang\",\n  \"email\": \"admin.destinasi@email.com\",\n  \"password\": \"123456\",\n  \"role\": \"business_destination\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "Register (Admin Penginapan & Hotel)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.environment.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manajemen Eco Bay Resort\",\n  \"email\": \"admin.hotel@email.com\",\n  \"password\": \"123456\",\n  \"role\": \"business_accommodation\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "Login — F-002",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.environment.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"senja@email.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Forgot Password — F-003",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"senja@email.com\"\n}"
+            },
+            "url": "{{base_url}}/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password — F-003",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PASTE_TOKEN_DISINI\",\n  \"new_password\": \"newpassword123\"\n}"
+            },
+            "url": "{{base_url}}/auth/reset-password"
+          }
+        },
+        {
+          "name": "Logout — F-035",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set('token', '');",
+                  "console.log('Token dibersihkan dari environment');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout",
+            "description": "Keluar dari akun dan otomatis menghapus token dari Postman Environment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Kelola Akun (MF-002)",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": { "method": "GET", "url": "{{base_url}}/user/me" }
+        },
+        {
+          "name": "Change Password — F-004",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"123456\",\n  \"new_password\": \"newpassword123\"\n}"
+            },
+            "url": "{{base_url}}/user/password"
+          }
+        },
+        {
+          "name": "Change Email — F-005",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_email\": \"senja.baru@email.com\"\n}"
+            },
+            "url": "{{base_url}}/user/email"
+          }
+        },
+        {
+          "name": "Get Preferences — F-006",
+          "request": { "method": "GET", "url": "{{base_url}}/user/preferences" }
+        },
+        {
+          "name": "Update Preferences — F-006",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"id\",\n  \"interests\": [\"nature\", \"culinary\", \"culture\", \"adventure\", \"shopping\", \"relaxation\"]\n}"
+            },
+            "url": "{{base_url}}/user/preferences"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌤️ Widget Cuaca Home (MF-013)",
+      "item": [
+        {
+          "name": "Cuaca Saat Ini Batam — F-036",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/weather/current"
+          }
+        },
+        {
+          "name": "Prakiraan Cuaca 4 Hari — F-037",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/weather/forecast"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏝️ Direktori Destinasi Batam (MF-016)",
+      "item": [
+        {
+          "name": "Semua Destinasi — F-043",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/destinations"
+          }
+        },
+        {
+          "name": "Destinasi per Kategori (nature/culture/culinary/shopping/adventure/relaxation) — F-043",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/destinations?category=nature"
+          }
+        },
+        {
+          "name": "Detail Destinasi (Eco Score, GPS, Share, Konservasi) — F-044..F-046",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/destinations/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏨 Direktori Akomodasi (MF-015)",
+      "item": [
+        {
+          "name": "Semua Akomodasi — F-040",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/accommodations"
+          }
+        },
+        {
+          "name": "Akomodasi per Kategori (hotel/resort/homestay) — F-040",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/accommodations?category=resort"
+          }
+        },
+        {
+          "name": "Detail Akomodasi (Eco Score & Dampak Lingkungan) — F-041",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/accommodations/1"
+          }
+        },
+        {
+          "name": "Toggle Favorit Akomodasi — F-042",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/accommodations/1/favorite"
+          }
+        },
+        {
+          "name": "Daftar Favorit Saya — F-042",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/accommodations/favorites"
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Rating & Eco Score Otomatis (MF-007)",
+      "item": [
+        {
+          "name": "Kirim Rating 3 Aspek — F-026, F-027",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"destination\",\n  \"target_id\": 1,\n  \"cleanliness\": 5,\n  \"environmental_condition\": 4,\n  \"environmental_care\": 5,\n  \"review_comment\": \"Sangat bersih dan perahu listriknya tidak mencemari air mangrove!\"\n}"
+            },
+            "url": "{{base_url}}/ratings",
+            "description": "Bobot otomatis: Kebersihan 35%, Kondisi Lingkungan 40%, Kepedulian 25%."
+          }
+        },
+        {
+          "name": "Lihat Ulasan & Eco Score Target — F-028",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/ratings?target_type=destination&target_id=1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚢 Estimasi Biaya Feri (MF-017)",
+      "item": [
+        {
+          "name": "Rute Feri dari Singapura/Malaysia — F-047",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/ferry/routes?origin_country=singapore"
+          }
+        },
+        {
+          "name": "Detail Rute Feri",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/ferry/routes/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗺️ Trips & AI Itinerary Generator (MF-003)",
+      "item": [
+        {
+          "name": "Buat Itinerary AI (Batam + Feri Asal) — F-007..F-010",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.trip && json.trip.id) { pm.environment.set('trip_id', json.trip.id.toString()); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Liburan Hijau Batam 3D2N\",\n  \"origin_country\": \"singapore\",\n  \"origin_port\": \"HarbourFront\",\n  \"duration_days\": 3,\n  \"pax\": 2,\n  \"budget\": 4000000,\n  \"interests\": [\"nature\", \"culinary\"],\n  \"start_date\": \"2026-09-12\",\n  \"end_date\": \"2026-09-14\"\n}"
+            },
+            "url": "{{base_url}}/trips"
+          }
+        },
+        {
+          "name": "List My Trips",
+          "request": { "method": "GET", "url": "{{base_url}}/trips" }
+        },
+        {
+          "name": "Trip Full Itinerary — F-011",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/full" }
+        },
+        {
+          "name": "Regenerate Itinerary — F-009",
+          "request": { "method": "POST", "url": "{{base_url}}/trips/{{trip_id}}/generate" }
+        },
+        {
+          "name": "Hentikan / Ubah Status Trip (archived/cancelled/completed)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"archived\"\n}"
+            },
+            "url": "{{base_url}}/trips/{{trip_id}}/status",
+            "description": "Pilihan status: archived | cancelled | completed | active"
+          }
+        },
+        {
+          "name": "Laporan Jejak Karbon — F-018, F-019",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/carbon" }
+        },
+        {
+          "name": "Sustainability Score Trip — F-021",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/score" }
+        }
+      ]
+    },
+    {
+      "name": "💬 Chat AI & Versi (MF-004, F-016)",
+      "item": [
+        {
+          "name": "Riwayat Chat AI — F-012",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/chat" }
+        },
+        {
+          "name": "Kirim Pesan Revisi Itinerary — F-013, F-015",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"revisi hari ke-2, ganti makan siang ke Warung Mie Sagu Bu Nur\"\n}"
+            },
+            "url": "{{base_url}}/trips/{{trip_id}}/chat"
+          }
+        },
+        {
+          "name": "Daftar Riwayat Versi Itinerary — F-016",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/versions" }
+        },
+        {
+          "name": "Rollback Versi Itinerary — F-016",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 1\n}"
+            },
+            "url": "{{base_url}}/trips/{{trip_id}}/versions/rollback"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌱 Carbon Offset (F-020)",
+      "item": [
+        {
+          "name": "Donasi Carbon Offset — F-020",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trip_id\": {{trip_id}},\n  \"amount_idr\": 25000\n}"
+            },
+            "url": "{{base_url}}/carbon-offset"
+          }
+        },
+        {
+          "name": "Riwayat Donasi Saya",
+          "request": { "method": "GET", "url": "{{base_url}}/carbon-offset/my" }
+        }
+      ]
+    },
+    {
+      "name": "👥 Trip Collaboration (MF-010)",
+      "item": [
+        {
+          "name": "Daftar Kolaborator — F-033",
+          "request": { "method": "GET", "url": "{{base_url}}/trips/{{trip_id}}/collaborators" }
+        },
+        {
+          "name": "Undang Kolaborator — F-033",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teman@email.com\",\n  \"role\": \"editor\"\n}"
+            },
+            "url": "{{base_url}}/trips/{{trip_id}}/collaborators"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifikasi (F-025, F-033, dll)",
+      "item": [
+        {
+          "name": "Daftar Notifikasi",
+          "request": { "method": "GET", "url": "{{base_url}}/notifications" }
+        },
+        {
+          "name": "Jumlah Notifikasi Belum Dibaca",
+          "request": { "method": "GET", "url": "{{base_url}}/notifications/count" }
+        },
+        {
+          "name": "Tandai Semua Sudah Dibaca",
+          "request": { "method": "PUT", "url": "{{base_url}}/notifications/read-all" }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Admin Pelaku Usaha (Business Admin)",
+      "description": "Endpoint khusus pengelolaan data oleh Admin Pelaku Usaha:\n- role=business_destination -> /business/destinations\n- role=business_accommodation -> /business/accommodations",
+      "item": [
+        {
+          "name": "Admin Destinasi — Tambah Destinasi/Kuliner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hutan Mangrove Rempang Mandiri\",\n  \"category\": \"nature\",\n  \"description\": \"Ekowisata susur mangrove perahu listrik lokal\",\n  \"location\": \"Jembatan 4 Barelang, Batam\",\n  \"latitude\": 1.0053,\n  \"longitude\": 104.0834,\n  \"opening_hours\": \"08:00 - 17:00\",\n  \"ticket_price\": 25000,\n  \"facilities\": [\"Toilet\", \"Dermaga\", \"Pemandu\"],\n  \"photos\": [\"https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=1000\"],\n  \"phone\": \"+62 812-7000-1122\",\n  \"conservation_contribution_pct\": 15\n}"
+            },
+            "url": "{{base_url}}/business/destinations"
+          }
+        },
+        {
+          "name": "Admin Destinasi — Daftar Destinasi Saya",
+          "request": { "method": "GET", "url": "{{base_url}}/business/destinations/my" }
+        },
+        {
+          "name": "Admin Akomodasi — Tambah Penginapan Baru",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bambu Lestari Homestay\",\n  \"category\": \"homestay\",\n  \"description\": \"Penginapan alami dari bambu di pedesaan Batam\",\n  \"location\": \"Sekupang, Batam\",\n  \"price_per_night\": 300000,\n  \"facilities\": [\"Wi-Fi\", \"Dapur Bersama\", \"Sepeda\"],\n  \"photos\": [\"https://images.unsplash.com/photo-1587061949409-02df41d5e562?q=80&w=1000\"],\n  \"phone\": \"+62 813-9988-7766\",\n  \"environmental_impact\": \"100% material bambu lestari & panen air hujan\"\n}"
+            },
+            "url": "{{base_url}}/business/accommodations"
+          }
+        },
+        {
+          "name": "Admin Akomodasi — Daftar Akomodasi Saya",
+          "request": { "method": "GET", "url": "{{base_url}}/business/accommodations/my" }
+        }
+      ]
+    }
+  ]
+}
